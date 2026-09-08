@@ -161,6 +161,8 @@ fun NoteCanvas(
     onPlacementChange: (id: Long, x: Float, y: Float, rotation: Float, z: Int) -> Unit,
     onDelete: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    /** Alto del encabezado que flota sobre el tablero. */
+    topInset: androidx.compose.ui.unit.Dp = 0.dp,
     /** Alto de la barra inferior: la papelera vive justo encima de ella. */
     bottomInset: androidx.compose.ui.unit.Dp = 0.dp,
     emptyContent: @Composable () -> Unit = {},
@@ -186,6 +188,71 @@ fun NoteCanvas(
     val snapTolerance = with(density) { 11.dp.toPx() }
     val stackGapPx = with(density) { 12.dp.toPx() }
     val bottomInsetPx = with(density) { bottomInset.toPx() }
+    val topInsetPx = with(density) { topInset.toPx() }
+
+    // Rectángulo que ocupan todas las notas: es lo que hay que poder ver.
+    val contentBounds = remember(items, noteWidthPx, density) {
+        if (items.isEmpty()) null else {
+            var left = Float.MAX_VALUE
+            var top = Float.MAX_VALUE
+            var right = -Float.MAX_VALUE
+            var bottom = -Float.MAX_VALUE
+            items.forEach { item ->
+                val x = with(density) { item.note.x.dp.toPx() }
+                val y = with(density) { item.note.y.dp.toPx() }
+                if (x < left) left = x
+                if (y < top) top = y
+                if (x + noteWidthPx > right) right = x + noteWidthPx
+                val approximateHeight = with(density) { 200.dp.toPx() }
+                if (y + approximateHeight > bottom) bottom = y + approximateHeight
+            }
+            androidx.compose.ui.geometry.Rect(left, top, right, bottom)
+        }
+    }
+
+    val fitPadding = with(density) { 28.dp.toPx() }
+
+    /** ¿Se ve alguna nota ahora mismo en el área útil? */
+    fun anyNoteVisible(): Boolean {
+        if (items.isEmpty()) return true
+        val approximateHeight = with(density) { 200.dp.toPx() }
+        return items.any { item ->
+            val x = with(density) { item.note.x.dp.toPx() }
+            val y = with(density) { item.note.y.dp.toPx() }
+            boardState.isVisible(
+                androidx.compose.ui.geometry.Rect(x, y, x + noteWidthPx, y + approximateHeight)
+            )
+        }
+    }
+
+    var didAutoFit by remember { mutableStateOf(false) }
+    var lost by remember { mutableStateOf(false) }
+    var interactionTick by remember { mutableStateOf(0) }
+    var controlsVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(interactionTick) {
+        if (interactionTick == 0) return@LaunchedEffect
+        controlsVisible = true
+        delay(2400)
+        controlsVisible = false
+    }
+
+    // Al entrar, si no se ve ninguna nota, se encuadra el escritorio sobre
+    // ellas. Nunca se abre la app mirando a un rincón vacío del tablero.
+    LaunchedEffect(boardState.viewport, contentBounds) {
+        if (boardState.viewport == Size.Zero) return@LaunchedEffect
+        // Al abrir el escritorio siempre se encuadra sobre tus notas. Abrir la
+        // app y tener que buscarlas sería lo contrario de acogedor.
+        if (!didAutoFit && contentBounds != null) {
+            boardState.fitTo(contentBounds, fitPadding)
+        }
+        didAutoFit = true
+    }
+
+    // Y si te alejas paseando, aparece un atajo para volver.
+    LaunchedEffect(boardState.offset, boardState.scale, items) {
+        lost = didAutoFit && contentBounds != null && !anyNoteVisible()
+    }
     // La franja sensible arranca justo encima de la barra, no del borde de la
     // pantalla: si no, la papelera queda medio tapada y su zona útil también.
     val trashBandPx = with(density) { 108.dp.toPx() } + bottomInsetPx
@@ -193,10 +260,6 @@ fun NoteCanvas(
     val edgeZonePx = with(density) { 84.dp.toPx() }
     val maxEdgeSpeed = with(density) { 620.dp.toPx() }
 
-    LaunchedEffect(boardW, boardH) {
-        boardState.boardPx = Size(boardW, boardH)
-        boardState.offset = boardState.clamp()
-    }
 
     // Sincroniza la posición guardada con la posición dibujada, sin tocar la
     // nota que se está arrastrando en este momento. El estado físico de cada
@@ -337,14 +400,19 @@ fun NoteCanvas(
             .fillMaxSize()
             .clipToBounds()
             .onSizeChanged {
-                boardState.viewport = Size(it.width.toFloat(), it.height.toFloat())
-                boardState.offset = boardState.clamp()
+                boardState.configure(
+                    viewport = Size(it.width.toFloat(), it.height.toFloat()),
+                    board = Size(boardW, boardH),
+                    top = topInsetPx,
+                    bottom = bottomInsetPx,
+                )
             }
             // Doble toque para acercarse justo donde se ha tocado.
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { position ->
                         feedback.click()
+                        interactionTick++
                         val target = if (boardState.scale > 1.05f) 1f else Board.DoubleTapScale
                         boardState.zoomTo(target, position)
                     },
@@ -354,6 +422,7 @@ fun NoteCanvas(
             // gestos, así que esto sólo actúa sobre el fondo.
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
+                    interactionTick++
                     boardState.applyTransform(centroid, pan, zoom)
                 }
             }
@@ -592,22 +661,56 @@ fun NoteCanvas(
             ) { emptyContent() }
         }
 
-        // Controles de zoom: el gesto de pinza es cómodo, pero nunca debe ser
-        // la única forma de hacer algo.
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = Space.m),
-            verticalArrangement = Arrangement.spacedBy(Space.s),
+        // Los controles de zoom no viven permanentemente en pantalla: aparecen
+        // cuando tocas el tablero y se van solos. En reposo el escritorio está
+        // limpio, que es de lo que va todo esto.
+        AnimatedVisibility(
+            visible = controlsVisible && dragTargetId == null,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = Space.m),
+            enter = fadeIn(motion.fade()) + scaleIn(motion.gentle(), initialScale = 0.85f),
+            exit = fadeOut(motion.fade()) + scaleOut(motion.gentle(), targetScale = 0.85f),
         ) {
-            ZoomButton(RinconIcons.Plus, "Acercar") {
-                boardState.zoomTo(boardState.scale * 1.35f, boardState.viewport.viewportCenter())
+            Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+                ZoomButton(RinconIcons.Plus, "Acercar") {
+                    interactionTick++
+                    boardState.zoomTo(boardState.scale * 1.35f, boardState.safeRect.center)
+                }
+                ZoomButton(RinconIcons.Minus, "Alejar") {
+                    interactionTick++
+                    boardState.zoomTo(boardState.scale / 1.35f, boardState.safeRect.center)
+                }
             }
-            ZoomButton(RinconIcons.Minus, "Alejar") {
-                boardState.zoomTo(boardState.scale / 1.35f, boardState.viewport.viewportCenter())
-            }
-            ZoomButton(RinconIcons.Undo, "Ver todo el tablero") {
-                boardState.zoomTo(Board.MinScale + 0.05f, boardState.viewport.viewportCenter())
+        }
+
+        // Y si te has ido lejos paseando, un solo atajo para volver.
+        AnimatedVisibility(
+            visible = lost && dragTargetId == null,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomInset + Space.m),
+            enter = fadeIn(motion.fade()) + scaleIn(motion.playful(), initialScale = 0.85f),
+            exit = fadeOut(motion.quickFade()) + scaleOut(motion.snappy(), targetScale = 0.9f),
+        ) {
+            Row(
+                modifier = Modifier
+                    .softShadow(10.dp, Rincon.shapes.pill)
+                    .clip(Rincon.shapes.pill)
+                    .background(colors.surface)
+                    .border(1.dp, colors.outlineSoft, Rincon.shapes.pill)
+                    .pressable {
+                        contentBounds?.let { boardState.fitTo(it, fitPadding) }
+                    }
+                    .padding(horizontal = Space.l, vertical = Space.m),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.s),
+            ) {
+                RinconIcon(RinconIcons.Undo, null, tint = colors.accent, size = 20.dp)
+                Text(
+                    "Volver a mis notas",
+                    style = Rincon.type.navLabel,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                )
             }
         }
 
@@ -638,7 +741,7 @@ fun NoteCanvas(
                     size = 22.dp,
                 )
                 Text(
-                    if (overTrash) "Suelta para romperla" else "Arrastra aquí para tirar",
+                    if (overTrash) "Suelta para romperla" else "Tirar",
                     style = Rincon.type.navLabel,
                     color = if (overTrash) colors.accentInk else colors.textSecondary,
                     maxLines = 1,
@@ -647,8 +750,6 @@ fun NoteCanvas(
         }
     }
 }
-
-private fun Size.viewportCenter(): Offset = Offset(width / 2f, height / 2f)
 
 @Composable
 private fun ZoomButton(

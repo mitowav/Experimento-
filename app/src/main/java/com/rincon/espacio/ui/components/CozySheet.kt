@@ -9,6 +9,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +64,13 @@ fun CozySheet(
     if (!visible) return
     val colors = Rincon.colors
     val motion = Rincon.motion
+
+    // El hueco de la barra de gestos se mide AQUÍ, en la ventana de la app,
+    // donde el sistema sí reparte sus márgenes. Dentro del diálogo no siempre
+    // llegan, y por eso el botón del pie acababa cortado por debajo. Con el
+    // valor ya en la mano, dentro sólo hay que dejar ese espacio.
+    val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
 
@@ -113,7 +122,6 @@ fun CozySheet(
                         Modifier
                             .fillMaxWidth()
                             .imePadding()
-                            .navigationBarsPadding()
                     ) {
                         Box(
                             Modifier.fillMaxWidth().padding(vertical = Space.m),
@@ -145,11 +153,16 @@ fun CozySheet(
                                     .height(1.dp)
                                     .background(colors.outlineSoft)
                             )
-                            Box(Modifier.padding(top = Space.m, bottom = Space.m)) {
+                            Box(
+                                Modifier.padding(
+                                    top = Space.m,
+                                    bottom = systemBottom + Space.m,
+                                )
+                            ) {
                                 footer()
                             }
                         } else {
-                            Spacer(Modifier.height(Space.m))
+                            Spacer(Modifier.height(systemBottom + Space.m))
                         }
                     }
                 }
