@@ -9,11 +9,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -69,15 +71,24 @@ fun CozySheet(
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = true,
+            // Sin esto el diálogo se dibuja a pantalla completa pero no recibe
+            // los insets del sistema, y el último botón del panel acaba debajo
+            // de la barra de gestos. Con `false`, los insets llegan y los
+            // aplicamos nosotros abajo.
+            decorFitsSystemWindows = false,
         ),
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.shadow.copy(alpha = 0.42f * scrimAlpha))
                 .pointerInput(Unit) { detectTapGestures { onDismiss() } },
             contentAlignment = Alignment.BottomCenter,
         ) {
+            // El panel nunca ocupa toda la altura: siempre se ve un poco de lo
+            // que hay detrás, para no perder el contexto de dónde estás.
+            val maxSheetHeight = maxHeight * 0.92f
+
             AnimatedVisibility(
                 visible = shown,
                 enter = slideInVertically(motion.offsetSpring()) { it } + fadeIn(motion.quickFade()),
@@ -86,15 +97,20 @@ fun CozySheet(
                 Box(
                     modifier = modifier
                         .fillMaxWidth()
+                        .heightIn(max = maxSheetHeight)
                         .softShadow(24.dp, Rincon.shapes.sheet, spotAlpha = 0.3f)
                         .clip(Rincon.shapes.sheet)
                         .background(colors.surface)
                         // Los toques dentro del panel no deben cerrarlo.
-                        .pointerInput(Unit) { detectTapGestures { } }
-                        .navigationBarsPadding()
-                        .imePadding(),
+                        .pointerInput(Unit) { detectTapGestures { } },
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(bottom = Space.l)) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .imePadding()
+                            .navigationBarsPadding()
+                            .padding(bottom = Space.m)
+                    ) {
                         Box(
                             Modifier.fillMaxWidth().padding(vertical = Space.m),
                             contentAlignment = Alignment.Center,

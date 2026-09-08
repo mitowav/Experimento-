@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -145,7 +144,7 @@ fun StudyScreen(
     val subject = editingSubject
     if (subject != null) {
         CozySheet(visible = true, onDismiss = viewModel::dismissSubject) {
-            Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 560.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 SheetTitle(if (subject.id == 0L) "Nueva asignatura" else "Editar asignatura")
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(horizontal = Space.xl)) {
@@ -200,7 +199,7 @@ fun StudyScreen(
         var showTime by remember(exam.id) { mutableStateOf(false) }
         var remind by remember(exam.id) { mutableStateOf(exam.reminderId != null) }
         CozySheet(visible = true, onDismiss = viewModel::dismissExam) {
-            Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 560.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 SheetTitle(if (exam.id == 0L) "Nuevo examen" else "Editar examen")
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(horizontal = Space.xl)) {

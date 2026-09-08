@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -364,7 +365,12 @@ fun NoteCanvas(
                     translationY = boardState.offset.y
                     transformOrigin = TransformOrigin(0f, 0f)
                 }
-                .size(Board.Width, Board.Height)
+                // `size` se deja limitar por las restricciones del padre, así
+                // que el tablero acababa midiendo lo mismo que la ventana y,
+                // al aplicarle la escala, se dibujaba como un rectángulo
+                // pequeño anclado arriba a la izquierda. `requiredSize` impone
+                // el tamaño real del tablero e ignora esas restricciones.
+                .requiredSize(Board.Width, Board.Height)
                 .boardSurface(colors.outlineSoft, colors.surfaceSunken)
         ) {
             items.sortedBy { it.note.zIndex }.forEach { item ->
@@ -553,9 +559,13 @@ fun NoteCanvas(
         }
 
         if (items.isEmpty()) {
+            // Centrado en el hueco libre: arriba está el encabezado y abajo la
+            // barra, y el mensaje no debe pelearse con ninguno de los dos.
             Box(
-                modifier = Modifier.fillMaxSize().padding(top = 40.dp),
-                contentAlignment = Alignment.TopCenter,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 132.dp, bottom = 148.dp),
+                contentAlignment = Alignment.Center,
             ) { emptyContent() }
         }
 
@@ -570,7 +580,7 @@ fun NoteCanvas(
             ZoomButton(RinconIcons.Plus, "Acercar") {
                 boardState.zoomTo(boardState.scale * 1.35f, boardState.viewport.viewportCenter())
             }
-            ZoomButton(RinconIcons.Grip, "Alejar") {
+            ZoomButton(RinconIcons.Minus, "Alejar") {
                 boardState.zoomTo(boardState.scale / 1.35f, boardState.viewport.viewportCenter())
             }
             ZoomButton(RinconIcons.Undo, "Ver todo el tablero") {

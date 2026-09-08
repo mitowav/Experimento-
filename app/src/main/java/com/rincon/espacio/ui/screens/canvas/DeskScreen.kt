@@ -1,11 +1,13 @@
 package com.rincon.espacio.ui.screens.canvas
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -17,6 +19,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -95,6 +99,22 @@ fun DeskScreen(
                     message = "Crea tu primera nota con el botón +.\nLuego arrástrala donde quieras.",
                 )
             },
+        )
+
+        // El encabezado flota sobre el tablero, así que necesita un velo que
+        // se funda hacia abajo: sin él, el título compite con las notas y las
+        // guías que pasan por detrás y ninguno de los dos se lee bien.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(148.dp)
+                .background(
+                    Brush.verticalGradient(
+                        0f to colors.background,
+                        0.55f to colors.background.copy(alpha = 0.88f),
+                        1f to Color.Transparent,
+                    )
+                )
         )
 
         Column(

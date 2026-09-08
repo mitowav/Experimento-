@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -197,7 +196,6 @@ fun GoalsScreen(
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
-                    .heightIn(max = 580.dp)
             ) {
                 SheetTitle(if (goal.id == 0L) "Nuevo objetivo" else "Editar objetivo")
                 Spacer(Modifier.height(Space.l))

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -135,7 +134,6 @@ fun HabitsScreen(
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
-                    .heightIn(max = 600.dp)
             ) {
                 SheetTitle(if (habit.id == 0L) "Nuevo hábito" else "Editar hábito")
                 Spacer(Modifier.height(Space.l))

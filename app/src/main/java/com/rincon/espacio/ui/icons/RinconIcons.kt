@@ -104,6 +104,8 @@ object RinconIcons {
 
     val Close: ImageVector by lazy { build("Close", "M6.6 6.6 L17.4 17.4", "M17.4 6.6 L6.6 17.4") }
 
+    val Minus: ImageVector by lazy { build("Minus", "M5.4 12 L18.6 12") }
+
     val Clock: ImageVector by lazy {
         build(
             "Clock",
