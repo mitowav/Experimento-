@@ -5,8 +5,8 @@ acogedor que a un panel de control. Notas de papel que se arrastran, tareas,
 objetivos, hábitos, estudio, calendario y recordatorios — todo local, todo
 offline.
 
-> **Estado:** primera versión funcional (MVP pulido). Kotlin + Jetpack Compose,
-> lista para generar APK.
+> **Estado:** funcional y en uso. Kotlin + Jetpack Compose, con APK que se
+> genera solo en cada cambio.
 
 ---
 
@@ -132,10 +132,57 @@ son propios.
 
 ---
 
+## Qué hace
+
+**Escritorio.** Un tablero más grande que la pantalla por el que te paseas y te
+acercas (pinza, doble toque o botones). Las notas son papeles: se arrastran con
+inercia, se inclinan, se imantan al canto de otras y se rompen en pedazos si las
+tiras a la papelera. Cinco estilos de papel —liso, rayado, cuadrícula, post-it
+con cinta, reciclado con el borde rasgado de verdad— y doce colores. Al abrir,
+el escritorio se encuadra solo sobre tus notas.
+
+**Hoy.** Tareas, eventos, exámenes, sesiones de estudio y hábitos del día en una
+sola lista ordenada por hora. Deslizar completa o borra.
+
+**Tareas que se repiten.** Cada día, de lunes a viernes, cada semana o cada mes.
+Al marcarlas saltan a su siguiente fecha y vuelven pendientes, con su aviso
+detrás.
+
+**Agenda.** Día, semana o mes. Los eventos con hora se reprograman arrastrando
+su tirador, con un toque háptico por cada salto de 15 minutos.
+
+**Objetivos y hábitos.** Objetivos divididos en pasos pequeños; hábitos con la
+semana visible de un vistazo y la racha como detalle discreto. Sin XP, ni
+monedas, ni niveles.
+
+**Estudio.** Asignaturas con su próximo examen, la preparación, las tareas y los
+minutos de la semana. Apuntar un rato estudiado cuesta un toque.
+
+**Avisos.** Cuatro tonos propios —Campana, Gota, Amanecer y Madera— que van de
+lo discreto a lo que de verdad despierta. Se escuchan antes de elegirlos.
+
+**Buscar.** Por lo que escribiste, dentro del texto y de los pasos, ignorando
+tildes y mayúsculas.
+
+**Copia de seguridad.** Exportar todo a un JSON legible y restaurarlo, con el
+selector de archivos del sistema y sin permisos de almacenamiento.
+
+**Deshacer.** Romper una nota es fácil de hacer sin querer, así que se puede
+recuperar durante unos segundos, en su sitio y con sus pasos.
+
+---
+
 ## La física de las notas
 
 En `ui/components/NoteCanvas.kt`:
 
+- todo se dibuja en coordenadas de pantalla, calculadas a mano con
+  `pantalla = tablero * escala + desplazamiento`. No hay un nodo gigante
+  escalado con `graphicsLayer`: esa vía dependía de cómo Compose resuelve las
+  restricciones de un hijo mayor que su padre, y el encuadre salía mal en
+  pantallas reales;
+- cada papel recibe como tamaño de nodo el que ocupa a la vista, así **lo que se
+  toca coincide con lo que se ve** a cualquier zoom;
 - la posición dibujada es un estado plano, escrito directamente desde el
   manejador del gesto, para que el papel **no vaya un fotograma por detrás del
   dedo**;
@@ -153,12 +200,22 @@ inclinación baja al 25 %: la app sigue explicando lo que pasa, sin balanceo.
 
 ---
 
-## Sonido y vibración
+## Sonido
 
-Los seis efectos (`res/raw/sfx_*.wav`) están **sintetizados**, no descargados:
-tonos suaves con envolvente exponencial y ruido filtrado para el papel. Pesan
-200 KB en total. Se pueden apagar del todo o bajar de intensidad desde *Yo →
-Cómo se siente*.
+Todo el audio está **sintetizado**, no descargado: ocho efectos de interfaz
+(`res/raw/sfx_*.wav`) y cuatro tonos de aviso (`res/raw/tone_*.wav`), generados
+con envolventes exponenciales, ruido filtrado y filtros que se cierran con el
+tiempo para que nada acabe en un corte seco. Los efectos se pueden apagar o
+bajar de intensidad desde *Yo → Cómo se siente*.
+
+## El área útil
+
+La ventana ocupa toda la pantalla, pero arriba hay un encabezado y abajo una
+barra. Todo el encuadre del tablero se calcula contra el **área realmente
+visible** —y el encabezado se mide, no se estima—, de modo que el tablero
+siempre la cubre y no se puede pasear hasta dejarla vacía. Si aun así te alejas,
+aparece un atajo para volver. Es la clase de detalle que no se nota cuando está
+bien y arruina la app cuando está mal, así que tiene sus propios tests.
 
 ---
 
@@ -194,7 +251,6 @@ Permisos que pide, y para qué:
 
 ## Qué falta (a propósito)
 
-La primera versión prefiere cinco cosas bien hechas a treinta a medias. Quedan
-fuera, con la arquitectura ya preparada para ellas: sincronización en la nube,
-widgets de pantalla de inicio, adjuntar imágenes a las notas, exportar/importar
-y estadísticas de estudio a largo plazo.
+Con la arquitectura ya preparada para ello: widget de pantalla de inicio,
+sincronización en la nube, adjuntar imágenes a las notas y estadísticas de
+estudio a largo plazo.
