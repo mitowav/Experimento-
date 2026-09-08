@@ -159,6 +159,8 @@ fun NoteCanvas(
     onPlacementChange: (id: Long, x: Float, y: Float, rotation: Float, z: Int) -> Unit,
     onDelete: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    /** Alto de la barra inferior: la papelera vive justo encima de ella. */
+    bottomInset: androidx.compose.ui.unit.Dp = 0.dp,
     emptyContent: @Composable () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -180,7 +182,10 @@ fun NoteCanvas(
     val gridPx = with(density) { 48.dp.toPx() }
     val snapTolerance = with(density) { 11.dp.toPx() }
     val stackGapPx = with(density) { 12.dp.toPx() }
-    val trashBandPx = with(density) { 116.dp.toPx() }
+    val bottomInsetPx = with(density) { bottomInset.toPx() }
+    // La franja sensible arranca justo encima de la barra, no del borde de la
+    // pantalla: si no, la papelera queda medio tapada y su zona útil también.
+    val trashBandPx = with(density) { 108.dp.toPx() } + bottomInsetPx
     val trashHalfWidthPx = with(density) { 140.dp.toPx() }
     val edgeZonePx = with(density) { 84.dp.toPx() }
     val maxEdgeSpeed = with(density) { 620.dp.toPx() }
@@ -262,7 +267,9 @@ fun NoteCanvas(
                     if (cx > viewport.width - edgeZonePx) pushX = -pressure(viewport.width - cx)
                     if (cy < edgeZonePx) pushY = pressure(cy)
                     // Abajo no se panea sobre la papelera: ahí el gesto significa tirar.
-                    if (cy > viewport.height - edgeZonePx && !isOverTrash(screen, state.height)) {
+                    if (cy > viewport.height - edgeZonePx - bottomInsetPx &&
+                        !isOverTrash(screen, state.height)
+                    ) {
                         pushY = -pressure(viewport.height - cy)
                     }
 
@@ -591,7 +598,9 @@ fun NoteCanvas(
         // Papelera: sólo existe mientras se arrastra, y se abre al acercarse.
         AnimatedVisibility(
             visible = dragTargetId != null,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Space.xl),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomInset + Space.s),
             enter = scaleIn(motion.gentle(), initialScale = 0.8f) + fadeIn(motion.fade()),
             exit = scaleOut(motion.snappy(), targetScale = 0.85f) + fadeOut(motion.quickFade()),
         ) {

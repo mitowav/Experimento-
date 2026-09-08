@@ -92,6 +92,7 @@ fun DeskScreen(
             onToggleDone = viewModel::toggleDone,
             onPlacementChange = viewModel::savePlacement,
             onDelete = viewModel::deleteNote,
+            bottomInset = bottomInset,
             emptyContent = {
                 EmptyState(
                     icon = RinconIcons.Note,
