@@ -224,10 +224,10 @@ fun GoalsScreen(
                     Spacer(Modifier.height(Space.l))
                     FieldLabel("Color")
                 }
-                PaperColorPicker(goal.colorKey) { key -> viewModel.update { it.copy(colorKey = key) } }
+                PaperColorPicker(goal.colorKey, onSelect = { key -> viewModel.update { it.copy(colorKey = key) } })
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
-                IconPicker(goal.iconKey) { key -> viewModel.update { it.copy(iconKey = key) } }
+                IconPicker(goal.iconKey, onSelect = { key -> viewModel.update { it.copy(iconKey = key) } })
                 Spacer(Modifier.height(Space.xl))
                 Column(Modifier.padding(horizontal = Space.xl)) {
                     PrimaryButton(

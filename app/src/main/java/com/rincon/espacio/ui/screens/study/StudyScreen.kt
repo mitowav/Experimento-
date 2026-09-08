@@ -165,10 +165,10 @@ fun StudyScreen(
                     Spacer(Modifier.height(Space.l))
                     FieldLabel("Color")
                 }
-                PaperColorPicker(subject.colorKey) { key -> viewModel.updateSubject { it.copy(colorKey = key) } }
+                PaperColorPicker(subject.colorKey, onSelect = { key -> viewModel.updateSubject { it.copy(colorKey = key) } })
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
-                IconPicker(subject.iconKey) { key -> viewModel.updateSubject { it.copy(iconKey = key) } }
+                IconPicker(subject.iconKey, onSelect = { key -> viewModel.updateSubject { it.copy(iconKey = key) } })
                 Spacer(Modifier.height(Space.xl))
                 Row(
                     Modifier.padding(horizontal = Space.xl),

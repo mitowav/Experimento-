@@ -165,10 +165,10 @@ fun MeScreen(
                         title = "Sonidos",
                         subtitle = "Pequeños sonidos de papel y confirmación",
                         trailing = {
-                            CozySwitch(settings.soundEnabled) { value ->
+                            CozySwitch(settings.soundEnabled, onCheckedChange = { value ->
                                 viewModel.setSoundEnabled(value)
                                 if (value) feedback.pop()
-                            }
+                            })
                         },
                     )
                     if (settings.soundEnabled) {
@@ -191,10 +191,10 @@ fun MeScreen(
                         title = "Vibración",
                         subtitle = "Respuesta háptica muy breve al tocar",
                         trailing = {
-                            CozySwitch(settings.hapticsEnabled) { value ->
+                            CozySwitch(settings.hapticsEnabled, onCheckedChange = { value ->
                                 viewModel.setHaptics(value)
                                 if (value) feedback.tap()
-                            }
+                            })
                         },
                     )
                     SettingRow(

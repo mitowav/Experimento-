@@ -242,15 +242,15 @@ private fun DayHeader(date: LocalDate, onShift: (Long) -> Unit) {
     val colors = Rincon.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         com.rincon.espacio.ui.components.RoundIconButton(
-            RinconIcons.ChevronLeft, "Día anterior",
-        ) { onShift(-1) }
+            RinconIcons.ChevronLeft, "Día anterior", onClick = { onShift(-1) },
+        )
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(date.dayOfMonth.toString(), style = Rincon.type.numeral, color = colors.textPrimary)
             Text(Dates.weekdayShort(date), style = Rincon.type.body, color = colors.textSecondary)
         }
         com.rincon.espacio.ui.components.RoundIconButton(
-            RinconIcons.ChevronRight, "Día siguiente",
-        ) { onShift(1) }
+            RinconIcons.ChevronRight, "Día siguiente", onClick = { onShift(1) },
+        )
     }
 }
 
@@ -267,7 +267,8 @@ private fun WeekStrip(
         Row(verticalAlignment = Alignment.CenterVertically) {
             com.rincon.espacio.ui.components.RoundIconButton(
                 RinconIcons.ChevronLeft, "Semana anterior",
-            ) { onSelect(selected.minusWeeks(1)) }
+                onClick = { onSelect(selected.minusWeeks(1)) },
+            )
             Text(
                 text = "${Dates.shortDate(start)} – ${Dates.shortDate(start.plusDays(6))}",
                 style = Rincon.type.cardTitle,
@@ -277,7 +278,8 @@ private fun WeekStrip(
             )
             com.rincon.espacio.ui.components.RoundIconButton(
                 RinconIcons.ChevronRight, "Semana siguiente",
-            ) { onSelect(selected.plusWeeks(1)) }
+                onClick = { onSelect(selected.plusWeeks(1)) },
+            )
         }
         Spacer(Modifier.height(Space.m))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -462,10 +464,10 @@ private fun EventEditorSheet(
                 Spacer(Modifier.height(Space.l))
                 FieldLabel("Color")
             }
-            PaperColorPicker(draft.colorKey) { draft = draft.copy(colorKey = it) }
+            PaperColorPicker(draft.colorKey, onSelect = { draft = draft.copy(colorKey = it) })
             Spacer(Modifier.height(Space.l))
             Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
-            IconPicker(draft.iconKey) { draft = draft.copy(iconKey = it) }
+            IconPicker(draft.iconKey, onSelect = { draft = draft.copy(iconKey = it) })
 
             Column(Modifier.padding(horizontal = Space.xl)) {
                 Spacer(Modifier.height(Space.l))

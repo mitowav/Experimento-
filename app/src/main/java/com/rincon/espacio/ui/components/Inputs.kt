@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -119,7 +120,7 @@ fun PaperColorPicker(
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .androidxGraphicsScale(scale)
+                    .scaled(scale)
                     .softShadow(if (isSelected) 8.dp else 3.dp, RoundedCornerShape(18.dp))
                     .clip(RoundedCornerShape(18.dp))
                     .background(color.paper(dark))
@@ -293,8 +294,8 @@ fun SettingRow(
 }
 
 /** Pequeño helper para escalar sin repetir `graphicsLayer` por todas partes. */
-fun Modifier.androidxGraphicsScale(scale: Float): Modifier =
-    androidx.compose.ui.graphics.graphicsLayer(scaleX = scale, scaleY = scale)
+fun Modifier.scaled(scale: Float): Modifier =
+    this.graphicsLayer(scaleX = scale, scaleY = scale)
 
 @Composable
 fun StepperRow(

@@ -86,9 +86,9 @@ fun TodayScreen(
                                 color = colors.textSecondary,
                             )
                         }
-                        RoundIconButton(RinconIcons.ChevronLeft, "Día anterior") { viewModel.shiftDays(-1) }
+                        RoundIconButton(RinconIcons.ChevronLeft, "Día anterior", onClick = { viewModel.shiftDays(-1) })
                         Spacer(Modifier.width(Space.s))
-                        RoundIconButton(RinconIcons.ChevronRight, "Día siguiente") { viewModel.shiftDays(1) }
+                        RoundIconButton(RinconIcons.ChevronRight, "Día siguiente", onClick = { viewModel.shiftDays(1) })
                     }
                     if (date != today) {
                         Spacer(Modifier.height(Space.s))

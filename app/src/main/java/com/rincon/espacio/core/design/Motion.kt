@@ -1,6 +1,7 @@
 package com.rincon.espacio.core.design
 
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
@@ -47,8 +48,8 @@ class RinconMotion(val reduced: Boolean) {
         stiffness = if (reduced) 1600f else 520f,
     )
 
-    fun <T> fade(): AnimationSpec<T> = tween(if (reduced) 90 else 220, easing = StandardEasing)
-    fun <T> quickFade(): AnimationSpec<T> = tween(if (reduced) 60 else 140, easing = StandardEasing)
+    fun <T> fade(): FiniteAnimationSpec<T> = tween(if (reduced) 90 else 220, easing = StandardEasing)
+    fun <T> quickFade(): FiniteAnimationSpec<T> = tween(if (reduced) 60 else 140, easing = StandardEasing)
 
     fun offsetSpring(): FiniteAnimationSpec<IntOffset> = spring(
         dampingRatio = if (reduced) 1f else 0.85f,

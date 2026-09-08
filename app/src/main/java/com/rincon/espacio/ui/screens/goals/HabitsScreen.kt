@@ -172,10 +172,10 @@ fun HabitsScreen(
                     Spacer(Modifier.height(Space.l))
                     FieldLabel("Color")
                 }
-                PaperColorPicker(habit.colorKey) { key -> viewModel.update { it.copy(colorKey = key) } }
+                PaperColorPicker(habit.colorKey, onSelect = { key -> viewModel.update { it.copy(colorKey = key) } })
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
-                IconPicker(habit.iconKey) { key -> viewModel.update { it.copy(iconKey = key) } }
+                IconPicker(habit.iconKey, onSelect = { key -> viewModel.update { it.copy(iconKey = key) } })
                 Spacer(Modifier.height(Space.xl))
                 Row(
                     Modifier.padding(horizontal = Space.xl),

@@ -79,6 +79,7 @@ private val steps = listOf(
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit, modifier: Modifier = Modifier) {
     val colors = Rincon.colors
+    val motion = Rincon.motion
     var index by remember { mutableIntStateOf(0) }
     val step = steps[index]
     val paper = PaperColor.fromKey(step.colorKey)
@@ -101,8 +102,8 @@ fun OnboardingScreen(onFinish: () -> Unit, modifier: Modifier = Modifier) {
         AnimatedContent(
             targetState = index,
             transitionSpec = {
-                (scaleIn(Rincon.motion.gentle(), initialScale = 0.9f) + fadeIn(Rincon.motion.fade()))
-                    .togetherWith(fadeOut(Rincon.motion.quickFade()))
+                (scaleIn(motion.gentle(), initialScale = 0.9f) + fadeIn(motion.fade()))
+                    .togetherWith(fadeOut(motion.quickFade()))
             },
             label = "onboarding",
         ) { current ->
