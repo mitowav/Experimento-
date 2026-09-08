@@ -50,27 +50,15 @@ private data class OnboardingStep(
 
 private val steps = listOf(
     OnboardingStep(
-        title = "Tu espacio para organizar tu vida.",
-        body = "Notas, tareas, objetivos y hábitos en un sitio que apetece abrir.",
-        iconKey = "sparkle",
+        title = "Tu espacio.",
+        body = "Notas de papel que se arrastran, y lo que tengas que hacer hoy.",
+        iconKey = "note",
         colorKey = "Butter",
     ),
     OnboardingStep(
-        title = "Arrastra tus notas.",
-        body = "Son papeles de verdad: se cogen, se mueven y se quedan donde las dejas.",
-        iconKey = "note",
-        colorKey = "Peach",
-    ),
-    OnboardingStep(
-        title = "Organiza tu día.",
-        body = "Pon fecha y hora a lo que importa y deja que la app te avise.",
-        iconKey = "sun",
-        colorKey = "Sky",
-    ),
-    OnboardingStep(
-        title = "Alcanza tus objetivos.",
-        body = "Divide lo grande en pasos pequeños y ve cómo avanza.",
-        iconKey = "target",
+        title = "Colócalo a tu manera.",
+        body = "Arrastra, acerca y deja cada cosa donde te apetezca.",
+        iconKey = "sparkle",
         colorKey = "Sage",
     ),
 )

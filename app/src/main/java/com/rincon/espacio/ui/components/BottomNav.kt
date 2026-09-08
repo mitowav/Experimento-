@@ -1,6 +1,11 @@
 package com.rincon.espacio.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -82,22 +87,27 @@ fun RinconBottomBar(
                     animationSpec = Rincon.motion.playful(),
                     label = "tabLift",
                 )
-                Column(
+                // Sólo la pestaña activa lleva su nombre; las demás son
+                // icono. Cinco palabras permanentes eran cinco cosas más que
+                // leer cada vez que bajas la vista.
+                Row(
                     modifier = Modifier
                         .weight(1f)
                         .clip(Rincon.shapes.pill)
                         .background(bg)
                         .pressable(hapticOnPress = true) { onSelect(tab) }
-                        .padding(vertical = Space.s)
-                        .semantics {
-                            contentDescription = if (selected) "${tab.label}, seleccionado" else tab.label
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .padding(vertical = Space.m, horizontal = Space.s),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .graphicsLayer { translationY = -lift * 2.dp.toPx() },
+                            .graphicsLayer { translationY = -lift * 1.5.dp.toPx() }
+                            .semantics {
+                                contentDescription =
+                                    if (selected) "${tab.label}, seleccionado" else tab.label
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
                         RinconIcon(
@@ -107,15 +117,21 @@ fun RinconBottomBar(
                             size = 23.dp,
                         )
                     }
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = tab.label,
-                        style = Rincon.type.navLabel,
-                        color = if (selected) colors.accent else colors.textMuted,
-                        maxLines = 1,
-                        softWrap = false,
-                        textAlign = TextAlign.Center,
-                    )
+                    AnimatedVisibility(
+                        visible = selected,
+                        enter = expandHorizontally(Rincon.motion.sizeSpring()) + fadeIn(Rincon.motion.fade()),
+                        exit = shrinkHorizontally(Rincon.motion.sizeSpring()) + fadeOut(Rincon.motion.quickFade()),
+                    ) {
+                        Text(
+                            text = tab.label,
+                            style = Rincon.type.navLabel,
+                            color = colors.accent,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
                 }
             }
         }

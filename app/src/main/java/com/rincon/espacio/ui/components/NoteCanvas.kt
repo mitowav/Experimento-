@@ -20,18 +20,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,11 +43,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,6 +58,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.rincon.espacio.core.design.PaperColor
@@ -73,6 +75,9 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
+/** Alto de referencia de una nota mientras aún no se ha medido la real. */
+private val AssumedNoteHeight = 200.dp
+
 /** Estado físico de una nota mientras vive en el tablero. */
 private class NoteMotion(start: Offset, restingRotation: Float) {
     /**
@@ -88,12 +93,11 @@ private class NoteMotion(start: Offset, restingRotation: Float) {
 
     val lift = Animatable(0f)
     val tilt = Animatable(restingRotation)
-    /** 0 = acaba de nacer, 1 = asentada. Da la entrada de las notas nuevas. */
     val appear = Animatable(0f)
 
     var dragging by mutableStateOf(false)
     var resting = restingRotation
-    var height: Float = 0f
+    var height by mutableStateOf(0f)
 
     suspend fun settleTo(
         target: Offset,
@@ -112,18 +116,11 @@ private class NoteMotion(start: Offset, restingRotation: Float) {
 }
 
 /** Un trozo de papel roto volando. */
-private class Shard(
-    val local: Rect,
-    val vx: Float,
-    val vy: Float,
-    val spin: Float,
-)
+private class Shard(val local: Rect, val vx: Float, val vy: Float, val spin: Float)
 
 private class Shatter(
-    val id: Long,
     val origin: Offset,
     val color: Color,
-    val edge: Color,
     val shards: List<Shard>,
     val progress: Animatable<Float, *>,
 )
@@ -136,21 +133,21 @@ private const val VelocityHandover = 0.35f
 /**
  * El escritorio.
  *
- * Las notas no son una lista: son objetos con posición propia sobre un tablero
- * mucho más grande que la pantalla. Se puede pasear por él arrastrando el
- * fondo, acercarse con dos dedos o con los botones, y volver a la vista general
- * de un toque.
+ * Las notas no son una lista: son papeles con posición propia sobre un tablero
+ * más grande que la pantalla, por el que uno se pasea y se acerca.
  *
- * Física del arrastre:
- *  - la nota sigue el dedo sin retardo (el gesto escribe la posición directamente);
- *  - se eleva: escala +5,5 %, sombra más abierta y capa superior;
- *  - se inclina según la dirección del movimiento, con un tope de 7°;
- *  - al soltar continúa con la inercia medida y se asienta con un muelle;
- *  - si el punto de reposo cae cerca de una guía o del canto de otra nota, se
- *    acerca suavemente (imán con tolerancia estrecha, nunca cuadrícula rígida).
+ * **Cómo se dibuja.** Todo vive en coordenadas de pantalla, calculadas a mano
+ * con `pantalla = tablero * escala + desplazamiento`. No hay un nodo gigante
+ * escalado con `graphicsLayer`: esa vía dependía de cómo Compose resuelve las
+ * restricciones de un hijo mayor que su padre, y el encuadre salía mal en
+ * pantallas reales. Aquí cada papel se coloca donde toca y se le da el tamaño
+ * exacto que ocupa a la vista, de modo que lo que se ve y lo que responde al
+ * dedo son lo mismo a cualquier zoom.
  *
- * Todo el gesto se divide por la escala actual, de modo que arrastrar se siente
- * igual de preciso con el tablero alejado que con la nota a tamaño real.
+ * **Física del arrastre.** La nota sigue el dedo sin retardo; se eleva, se
+ * inclina según la dirección, y al soltarla continúa con la inercia medida
+ * antes de asentarse con un muelle. Si el punto de reposo cae cerca del canto
+ * de otra nota o de una guía, se acerca con tolerancia estrecha.
  */
 @Composable
 fun NoteCanvas(
@@ -161,10 +158,8 @@ fun NoteCanvas(
     onPlacementChange: (id: Long, x: Float, y: Float, rotation: Float, z: Int) -> Unit,
     onDelete: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    /** Alto del encabezado que flota sobre el tablero. */
-    topInset: androidx.compose.ui.unit.Dp = 0.dp,
-    /** Alto de la barra inferior: la papelera vive justo encima de ella. */
-    bottomInset: androidx.compose.ui.unit.Dp = 0.dp,
+    topInset: Dp = 0.dp,
+    bottomInset: Dp = 0.dp,
     emptyContent: @Composable () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -179,19 +174,39 @@ fun NoteCanvas(
     var dragTargetId by remember { mutableStateOf<Long?>(null) }
     var overTrash by remember { mutableStateOf(false) }
     var topZ by remember { mutableStateOf(0) }
-    var initialized by remember { mutableStateOf(false) }
+    var settled by remember { mutableStateOf(false) }
 
     val boardW = with(density) { Board.Width.toPx() }
     val boardH = with(density) { Board.Height.toPx() }
     val noteWidthPx = with(density) { NoteWidth.toPx() }
+    val assumedHeightPx = with(density) { AssumedNoteHeight.toPx() }
     val gridPx = with(density) { 48.dp.toPx() }
     val snapTolerance = with(density) { 11.dp.toPx() }
     val stackGapPx = with(density) { 12.dp.toPx() }
-    val bottomInsetPx = with(density) { bottomInset.toPx() }
+    val trashBandPx = with(density) { 108.dp.toPx() }
+    val trashHalfWidthPx = with(density) { 140.dp.toPx() }
+    val edgeZonePx = with(density) { 84.dp.toPx() }
+    val maxEdgeSpeed = with(density) { 620.dp.toPx() }
+    val fitPadding = with(density) { 32.dp.toPx() }
     val topInsetPx = with(density) { topInset.toPx() }
+    val bottomInsetPx = with(density) { bottomInset.toPx() }
 
-    // Rectángulo que ocupan todas las notas: es lo que hay que poder ver.
-    val contentBounds = remember(items, noteWidthPx, density) {
+    // Los márgenes pueden cambiar (el encabezado se mide, la barra también),
+    // así que el encuadre se reconfigura cuando lo hacen, no sólo al empezar.
+    LaunchedEffect(topInsetPx, bottomInsetPx, boardW, boardH) {
+        if (boardState.viewport != Size.Zero) {
+            boardState.configure(boardState.viewport, Size(boardW, boardH), topInsetPx, bottomInsetPx)
+        }
+    }
+
+    fun noteRect(item: NoteWithSubtasks): Rect {
+        val x = with(density) { item.note.x.dp.toPx() }
+        val y = with(density) { item.note.y.dp.toPx() }
+        val h = states[item.note.id]?.height?.takeIf { it > 0f } ?: assumedHeightPx
+        return Rect(x, y, x + noteWidthPx, y + h)
+    }
+
+    val contentBounds = remember(items, noteWidthPx, assumedHeightPx, density) {
         if (items.isEmpty()) null else {
             var left = Float.MAX_VALUE
             var top = Float.MAX_VALUE
@@ -203,29 +218,15 @@ fun NoteCanvas(
                 if (x < left) left = x
                 if (y < top) top = y
                 if (x + noteWidthPx > right) right = x + noteWidthPx
-                val approximateHeight = with(density) { 200.dp.toPx() }
-                if (y + approximateHeight > bottom) bottom = y + approximateHeight
+                if (y + assumedHeightPx > bottom) bottom = y + assumedHeightPx
             }
-            androidx.compose.ui.geometry.Rect(left, top, right, bottom)
+            Rect(left, top, right, bottom)
         }
     }
 
-    val fitPadding = with(density) { 28.dp.toPx() }
+    fun anyNoteVisible(): Boolean =
+        items.isEmpty() || items.any { boardState.isVisible(noteRect(it)) }
 
-    /** ¿Se ve alguna nota ahora mismo en el área útil? */
-    fun anyNoteVisible(): Boolean {
-        if (items.isEmpty()) return true
-        val approximateHeight = with(density) { 200.dp.toPx() }
-        return items.any { item ->
-            val x = with(density) { item.note.x.dp.toPx() }
-            val y = with(density) { item.note.y.dp.toPx() }
-            boardState.isVisible(
-                androidx.compose.ui.geometry.Rect(x, y, x + noteWidthPx, y + approximateHeight)
-            )
-        }
-    }
-
-    var didAutoFit by remember { mutableStateOf(false) }
     var lost by remember { mutableStateOf(false) }
     var interactionTick by remember { mutableStateOf(0) }
     var controlsVisible by remember { mutableStateOf(false) }
@@ -237,70 +238,76 @@ fun NoteCanvas(
         controlsVisible = false
     }
 
-    // Al entrar, si no se ve ninguna nota, se encuadra el escritorio sobre
-    // ellas. Nunca se abre la app mirando a un rincón vacío del tablero.
-    LaunchedEffect(boardState.viewport, contentBounds) {
+    /**
+     * Encuadre de entrada.
+     *
+     * Se espera a tener ventana Y notas: la base de datos emite primero una
+     * lista vacía, y dar el encuadre por hecho en ese momento era justo lo que
+     * dejaba el escritorio mirando a un rincón vacío.
+     */
+    LaunchedEffect(boardState.viewport, contentBounds, topInsetPx, bottomInsetPx) {
         if (boardState.viewport == Size.Zero) return@LaunchedEffect
-        // Al abrir el escritorio siempre se encuadra sobre tus notas. Abrir la
-        // app y tener que buscarlas sería lo contrario de acogedor.
-        if (!didAutoFit && contentBounds != null) {
-            boardState.fitTo(contentBounds, fitPadding)
-        }
-        didAutoFit = true
+        if (settled) return@LaunchedEffect
+        if (contentBounds == null) return@LaunchedEffect
+        boardState.fitTo(contentBounds, fitPadding)
+        settled = true
     }
 
-    // Y si te alejas paseando, aparece un atajo para volver.
     LaunchedEffect(boardState.offset, boardState.scale, items) {
-        lost = didAutoFit && contentBounds != null && !anyNoteVisible()
+        lost = settled && contentBounds != null && !anyNoteVisible()
     }
-    // La franja sensible arranca justo encima de la barra, no del borde de la
-    // pantalla: si no, la papelera queda medio tapada y su zona útil también.
-    val trashBandPx = with(density) { 108.dp.toPx() } + bottomInsetPx
-    val trashHalfWidthPx = with(density) { 140.dp.toPx() }
-    val edgeZonePx = with(density) { 84.dp.toPx() }
-    val maxEdgeSpeed = with(density) { 620.dp.toPx() }
 
-
-    // Sincroniza la posición guardada con la posición dibujada, sin tocar la
-    // nota que se está arrastrando en este momento. El estado físico de cada
-    // nota NO se crea aquí a propósito: este efecto se reinicia cada vez que
-    // cambia la lista, y crear aquí las animaciones de entrada hacía que se
-    // cancelaran a medio camino y las notas se quedaran invisibles.
-    LaunchedEffect(items) {
-        items.forEach { item ->
-            val note = item.note
-            val existing = states[note.id] ?: return@forEach
-            if (!existing.dragging) {
-                existing.resting = note.rotation
-                val target = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) }
-                if ((existing.value - target).getDistance() > 1.5f) {
-                    existing.value = target
-                }
+    fun shatter(item: NoteWithSubtasks, motionState: NoteMotion) {
+        val paper = PaperColor.fromKey(item.note.colorKey)
+        val screen = boardState.boardToScreen(motionState.value)
+        val scale = boardState.scale
+        val w = noteWidthPx * scale
+        val h = (motionState.height.takeIf { it > 0f } ?: assumedHeightPx) * scale
+        val random = Random(item.note.id * 31 + 7)
+        val columns = 3
+        val rows = 4
+        val shards = buildList {
+            for (r in 0 until rows) for (c in 0 until columns) {
+                val rect = Rect(
+                    left = w * c / columns,
+                    top = h * r / rows,
+                    right = w * (c + 1) / columns,
+                    bottom = h * (r + 1) / rows,
+                )
+                val angle = kotlin.math.atan2(rect.center.y - h / 2f, rect.center.x - w / 2f) +
+                    (random.nextFloat() - 0.5f) * 0.9f
+                val speed = 120f + random.nextFloat() * 340f
+                add(
+                    Shard(
+                        local = rect,
+                        vx = cos(angle) * speed,
+                        vy = sin(angle) * speed - 220f,
+                        spin = (random.nextFloat() - 0.5f) * 520f,
+                    )
+                )
             }
         }
-        topZ = items.maxOfOrNull { it.note.zIndex } ?: 0
-        initialized = true
+        val entry = Shatter(screen, paper.paper(colors.isDark), shards, Animatable(0f))
+        shatters.add(entry)
+        scope.launch {
+            entry.progress.animateTo(1f, tween(660, easing = LinearEasing))
+            shatters.remove(entry)
+        }
     }
 
-    /** ¿Está la nota sobre la papelera? Sólo cuenta la franja central. */
-    fun isOverTrash(screen: Offset, height: Float): Boolean {
+    fun isOverTrash(screen: Offset, heightPx: Float): Boolean {
         val viewport = boardState.viewport
         if (viewport == Size.Zero) return false
-        val bottom = screen.y + height * boardState.scale
-        val centerX = screen.x + noteWidthPx * boardState.scale / 2f
-        val withinBand = bottom > viewport.height - trashBandPx
-        val withinPill = abs(centerX - viewport.width / 2f) < trashHalfWidthPx
-        return withinBand && withinPill
+        val scale = boardState.scale
+        val bottom = screen.y + heightPx * scale
+        val centerX = screen.x + noteWidthPx * scale / 2f
+        return bottom > viewport.height - trashBandPx - bottomInsetPx &&
+            abs(centerX - viewport.width / 2f) < trashHalfWidthPx
     }
 
     /**
-     * Paneo de borde.
-     *
-     * Al arrastrar una nota hasta el filo de la pantalla, el tablero se desliza
-     * por debajo a velocidad continua, proporcional a lo cerca que esté el dedo
-     * del borde. Es un movimiento por fotograma, no un salto: la nota nunca da
-     * un tirón, y como el tablero se mueve bajo el dedo, la nota se queda
-     * exactamente donde la sujetas.
+     * Paneo de borde: al llevar una nota al filo, el tablero se desliza por
+     * debajo a velocidad continua. Movimiento por fotograma, nunca un salto.
      */
     LaunchedEffect(dragTargetId) {
         val id = dragTargetId ?: return@LaunchedEffect
@@ -313,8 +320,9 @@ fun NoteCanvas(
                 val viewport = boardState.viewport
                 if (delta > 0f && viewport != Size.Zero && state.dragging) {
                     val screen = boardState.boardToScreen(state.value)
-                    val cx = screen.x + noteWidthPx * boardState.scale / 2f
-                    val cy = screen.y + state.height * boardState.scale / 2f
+                    val scale = boardState.scale
+                    val cx = screen.x + noteWidthPx * scale / 2f
+                    val cy = screen.y + state.height * scale / 2f
 
                     fun pressure(distance: Float): Float =
                         ((edgeZonePx - distance) / edgeZonePx).coerceIn(0f, 1f)
@@ -323,17 +331,13 @@ fun NoteCanvas(
                     var pushY = 0f
                     if (cx < edgeZonePx) pushX = pressure(cx)
                     if (cx > viewport.width - edgeZonePx) pushX = -pressure(viewport.width - cx)
-                    if (cy < edgeZonePx) pushY = pressure(cy)
-                    // Abajo no se panea sobre la papelera: ahí el gesto significa tirar.
-                    if (cy > viewport.height - edgeZonePx - bottomInsetPx &&
-                        !isOverTrash(screen, state.height)
-                    ) {
-                        pushY = -pressure(viewport.height - cy)
+                    if (cy < topInsetPx + edgeZonePx) pushY = pressure(cy - topInsetPx)
+                    val bottomEdge = viewport.height - bottomInsetPx - edgeZonePx
+                    if (cy > bottomEdge && !isOverTrash(screen, state.height)) {
+                        pushY = -pressure(viewport.height - bottomInsetPx - cy)
                     }
 
                     if (pushX != 0f || pushY != 0f) {
-                        // Curva cuadrática: cerca del borde apenas se mueve y
-                        // se acelera al insistir, en vez de arrancar de golpe.
                         val step = Offset(
                             pushX * abs(pushX) * maxEdgeSpeed * delta,
                             pushY * abs(pushY) * maxEdgeSpeed * delta,
@@ -341,57 +345,10 @@ fun NoteCanvas(
                         val moved = boardState.clamp(boardState.offset + step)
                         val applied = moved - boardState.offset
                         boardState.offset = moved
-                        // El tablero se ha deslizado; la nota viaja con el dedo.
                         state.value -= applied / boardState.scale
                     }
                 }
             }
-        }
-    }
-
-    fun shatter(item: NoteWithSubtasks, motionState: NoteMotion) {
-        val dark = colors.isDark
-        val paper = PaperColor.fromKey(item.note.colorKey)
-        val screen = boardState.boardToScreen(motionState.value)
-        val w = noteWidthPx * boardState.scale
-        val h = (if (motionState.height > 0f) motionState.height else noteWidthPx) * boardState.scale
-        val random = Random(item.note.id * 31 + 7)
-        val cols = 3
-        val rows = 4
-        val shards = buildList {
-            for (r in 0 until rows) for (c in 0 until cols) {
-                val rect = Rect(
-                    left = w * c / cols,
-                    top = h * r / rows,
-                    right = w * (c + 1) / cols,
-                    bottom = h * (r + 1) / rows,
-                )
-                val cx = rect.center.x - w / 2f
-                val cy = rect.center.y - h / 2f
-                val angle = kotlin.math.atan2(cy, cx) + (random.nextFloat() - 0.5f) * 0.9f
-                val speed = 120f + random.nextFloat() * 340f
-                add(
-                    Shard(
-                        local = rect,
-                        vx = cos(angle) * speed,
-                        vy = sin(angle) * speed - 220f,
-                        spin = (random.nextFloat() - 0.5f) * 520f,
-                    )
-                )
-            }
-        }
-        val entry = Shatter(
-            id = item.note.id,
-            origin = screen,
-            color = paper.paper(dark),
-            edge = paper.edge(dark),
-            shards = shards,
-            progress = Animatable(0f),
-        )
-        shatters.add(entry)
-        scope.launch {
-            entry.progress.animateTo(1f, tween(660, easing = LinearEasing))
-            shatters.remove(entry)
         }
     }
 
@@ -407,7 +364,58 @@ fun NoteCanvas(
                     bottom = bottomInsetPx,
                 )
             }
-            // Doble toque para acercarse justo donde se ha tocado.
+            .drawBehind {
+                // La mesa, dibujada en coordenadas de pantalla: nada de nodos
+                // gigantes: sólo aritmética.
+                val scale = boardState.scale
+                val origin = boardState.boardToScreen(Offset.Zero)
+                val boardSize = Size(boardW * scale, boardH * scale)
+                val corner = CornerRadius(28.dp.toPx() * scale)
+
+                drawRoundRect(
+                    color = colors.surface.copy(alpha = 0.45f),
+                    topLeft = origin,
+                    size = boardSize,
+                    cornerRadius = corner,
+                )
+
+                val step = 96.dp.toPx() * scale
+                if (step > 6f) {
+                    val faint = colors.outline.copy(alpha = 0.28f)
+                    var x = origin.x + step
+                    while (x < origin.x + boardSize.width) {
+                        if (x >= 0f && x <= size.width) {
+                            drawLine(
+                                faint,
+                                Offset(x, origin.y.coerceAtLeast(0f)),
+                                Offset(x, (origin.y + boardSize.height).coerceAtMost(size.height)),
+                                1f,
+                            )
+                        }
+                        x += step
+                    }
+                    var y = origin.y + step
+                    while (y < origin.y + boardSize.height) {
+                        if (y >= 0f && y <= size.height) {
+                            drawLine(
+                                faint,
+                                Offset(origin.x.coerceAtLeast(0f), y),
+                                Offset((origin.x + boardSize.width).coerceAtMost(size.width), y),
+                                1f,
+                            )
+                        }
+                        y += step
+                    }
+                }
+
+                drawRoundRect(
+                    color = colors.outline.copy(alpha = 0.75f),
+                    topLeft = origin,
+                    size = boardSize,
+                    cornerRadius = corner,
+                    style = Stroke(width = 1.5.dp.toPx()),
+                )
+            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { position ->
@@ -418,8 +426,6 @@ fun NoteCanvas(
                     },
                 )
             }
-            // Pasear y acercar el tablero. Las notas consumen sus propios
-            // gestos, así que esto sólo actúa sobre el fondo.
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     interactionTick++
@@ -427,73 +433,61 @@ fun NoteCanvas(
                 }
             }
     ) {
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    scaleX = boardState.scale
-                    scaleY = boardState.scale
-                    translationX = boardState.offset.x
-                    translationY = boardState.offset.y
-                    transformOrigin = TransformOrigin(0f, 0f)
-                }
-                // `size` se deja limitar por las restricciones del padre, así
-                // que el tablero acababa midiendo lo mismo que la ventana y,
-                // al aplicarle la escala, se dibujaba como un rectángulo
-                // pequeño anclado arriba a la izquierda. `requiredSize` impone
-                // el tamaño real del tablero e ignora esas restricciones.
-                .requiredSize(Board.Width, Board.Height)
-                .boardSurface(colors.outline, colors.surface)
-        ) {
-            items.sortedBy { it.note.zIndex }.forEachIndexed { index, item ->
-                val note = item.note
-                key(note.id) {
+        val scale = boardState.scale
 
-                // El estado físico vive con la nota, no con la lista: así una
-                // recomposición de la lista no puede cancelar su entrada.
+        items.sortedBy { it.note.zIndex }.forEachIndexed { index, item ->
+            val note = item.note
+            key(note.id) {
                 val state = remember(note.id) {
                     NoteMotion(
                         start = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) },
                         restingRotation = note.rotation,
                     ).also { states[note.id] = it }
                 }
-                DisposableEffect(note.id) {
-                    onDispose { states.remove(note.id) }
-                }
+                DisposableEffect(note.id) { onDispose { states.remove(note.id) } }
                 LaunchedEffect(note.id) {
                     if (state.appear.value < 1f) {
-                        // En la primera carga entran en cascada; después, al vuelo.
-                        if (!initialized) delay(index * 28L)
+                        if (!settled) delay(index * 28L)
                         state.appear.animateTo(1f, appearSpec)
                     }
                 }
+                // La posición guardada manda mientras no se esté arrastrando.
+                LaunchedEffect(note.x, note.y, note.rotation) {
+                    if (!state.dragging) {
+                        state.resting = note.rotation
+                        val target = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) }
+                        if ((state.value - target).getDistance() > 1.5f) state.value = target
+                    }
+                }
 
+                val screen = boardState.boardToScreen(state.value)
                 val liftValue = state.lift.value
                 val appearValue = state.appear.value
+                val measuredHeight = state.height.takeIf { it > 0f } ?: assumedHeightPx
 
                 Box(
                     modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                state.value.x.roundToInt(),
-                                state.value.y.roundToInt(),
-                            )
-                        }
-                        .width(NoteWidth)
-                        .onSizeChanged { state.height = it.height.toFloat() }
+                        .offset { IntOffset(screen.x.roundToInt(), screen.y.roundToInt()) }
+                        // El tamaño del nodo es el que ocupa a la vista, así lo
+                        // que se toca coincide con lo que se ve a cualquier zoom.
+                        .requiredSize(
+                            width = with(density) { (noteWidthPx * scale).toDp() },
+                            height = with(density) { (measuredHeight * scale).toDp() },
+                        )
                         .graphicsLayer {
-                            val born = 0.86f + 0.14f * appearValue
-                            val scale = born * (1f + liftValue * LiftScale * motion.physicality)
-                            scaleX = scale
-                            scaleY = scale
+                            val born = 0.9f + 0.1f * appearValue
+                            val grow = born * (1f + liftValue * LiftScale * motion.physicality)
+                            scaleX = grow
+                            scaleY = grow
                             alpha = appearValue.coerceIn(0f, 1f)
                             rotationZ = state.tilt.value * appearValue
                             transformOrigin = TransformOrigin.Center
                         }
                         .softShadow(
-                            elevation = (5 + liftValue * 16).dp,
+                            elevation = (4 + liftValue * 16).dp,
                             shape = Rincon.shapes.note,
                             ambientAlpha = 0.10f + liftValue * 0.06f,
-                            spotAlpha = 0.16f + liftValue * 0.16f,
+                            spotAlpha = 0.14f + liftValue * 0.16f,
                         )
                         .pointerInput(note.id) {
                             var tracker = VelocityTracker()
@@ -512,20 +506,19 @@ fun NoteCanvas(
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    // El gesto llega en píxeles de pantalla; el
-                                    // tablero vive en su propia escala.
                                     val boardDelta = dragAmount / boardState.scale
                                     accumulated += dragAmount
                                     tracker.addPosition(change.uptimeMillis, accumulated)
-                                    val next = state.value + boardDelta
-                                    state.value = next
+                                    state.value += boardDelta
                                     val lean = (dragAmount.x * 1.15f)
                                         .coerceIn(-MaxTiltDegrees, MaxTiltDegrees) * motion.physicality
                                     scope.launch {
                                         state.tilt.animateTo(state.resting + lean, motion.snappy())
                                     }
-                                    val nowOverTrash =
-                                        isOverTrash(boardState.boardToScreen(next), state.height)
+                                    val nowOverTrash = isOverTrash(
+                                        boardState.boardToScreen(state.value),
+                                        state.height,
+                                    )
                                     if (nowOverTrash != overTrash) {
                                         overTrash = nowOverTrash
                                         if (nowOverTrash) feedback.warn()
@@ -544,44 +537,48 @@ fun NoteCanvas(
                                         scope.launch { state.lift.animateTo(0f, motion.gentle()) }
                                         onDelete(note.id)
                                     } else {
-                                        val current = state.value
-                                        val predicted = current + Offset(
-                                            velocity.x * InertiaSeconds / boardState.scale,
-                                            velocity.y * InertiaSeconds / boardState.scale,
+                                        val currentScale = boardState.scale
+                                        val predicted = state.value + Offset(
+                                            velocity.x * InertiaSeconds / currentScale,
+                                            velocity.y * InertiaSeconds / currentScale,
                                         )
                                         val others = items
                                             .filter { it.note.id != note.id }
                                             .mapNotNull { other ->
                                                 states[other.note.id]?.let { it.value to it.height }
                                             }
-                                        val settled = settlePosition(
+                                        val target = settlePosition(
                                             candidate = predicted,
                                             noteWidth = noteWidthPx,
                                             noteHeight = state.height,
                                             minX = 0f,
                                             maxX = boardW - noteWidthPx,
-                                            maxY = boardH - state.height.coerceAtLeast(1f),
+                                            maxY = boardH - measuredHeight,
                                             grid = gridPx,
                                             gap = stackGapPx,
                                             tolerance = snapTolerance,
                                             others = others,
                                         )
-                                        val storedX = with(density) { settled.x.toDp().value }
-                                        val storedY = with(density) { settled.y.toDp().value }
                                         feedback.settle()
                                         scope.launch { state.lift.animateTo(0f, motion.settle()) }
                                         scope.launch { state.tilt.animateTo(state.resting, motion.settle()) }
                                         scope.launch {
                                             state.settleTo(
-                                                target = settled,
+                                                target = target,
                                                 spec = motion.settle(),
                                                 initialVelocity = Offset(
-                                                    velocity.x * VelocityHandover / boardState.scale,
-                                                    velocity.y * VelocityHandover / boardState.scale,
+                                                    velocity.x * VelocityHandover / currentScale,
+                                                    velocity.y * VelocityHandover / currentScale,
                                                 ),
                                             )
                                         }
-                                        onPlacementChange(note.id, storedX, storedY, note.rotation, topZ)
+                                        onPlacementChange(
+                                            note.id,
+                                            with(density) { target.x.toDp().value },
+                                            with(density) { target.y.toDp().value },
+                                            note.rotation,
+                                            topZ,
+                                        )
                                     }
                                 },
                                 onDragCancel = {
@@ -595,14 +592,8 @@ fun NoteCanvas(
                         }
                         .pointerInput(note.id) {
                             detectTapGestures(
-                                onTap = {
-                                    feedback.tap()
-                                    onOpen(note.id)
-                                },
-                                onLongPress = {
-                                    feedback.pop()
-                                    onOpen(note.id)
-                                },
+                                onTap = { feedback.tap(); onOpen(note.id) },
+                                onLongPress = { feedback.pop(); onOpen(note.id) },
                             )
                         }
                         .semantics {
@@ -613,19 +604,29 @@ fun NoteCanvas(
                             }
                         },
                 ) {
-                    PaperNote(
-                        item = item,
-                        onToggleDone = if (note.isTask) {
-                            { onToggleDone(note.id, !note.done) }
-                        } else null,
-                    )
-                }
+                    // El papel se compone a su tamaño natural y se escala; así
+                    // el texto conserva su maquetación al alejar el zoom.
+                    Box(
+                        Modifier
+                            .requiredWidth(NoteWidth)
+                            .onSizeChanged { state.height = it.height.toFloat() }
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                transformOrigin = TransformOrigin(0f, 0f)
+                            }
+                    ) {
+                        PaperNote(
+                            item = item,
+                            onToggleDone = if (note.isTask) {
+                                { onToggleDone(note.id, !note.done) }
+                            } else null,
+                        )
+                    }
                 }
             }
         }
 
-        // Los pedazos vuelan sobre la ventana, no sobre el tablero: así no se
-        // encogen ni se recortan al estar alejado el zoom.
         if (shatters.isNotEmpty()) {
             Canvas(Modifier.fillMaxSize()) {
                 shatters.forEach { entry ->
@@ -651,19 +652,14 @@ fun NoteCanvas(
         }
 
         if (items.isEmpty()) {
-            // Centrado en el hueco libre: arriba está el encabezado y abajo la
-            // barra, y el mensaje no debe pelearse con ninguno de los dos.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 132.dp, bottom = 148.dp),
+                    .padding(top = topInset + Space.xl, bottom = bottomInset + Space.xxxl),
                 contentAlignment = Alignment.Center,
             ) { emptyContent() }
         }
 
-        // Los controles de zoom no viven permanentemente en pantalla: aparecen
-        // cuando tocas el tablero y se van solos. En reposo el escritorio está
-        // limpio, que es de lo que va todo esto.
         AnimatedVisibility(
             visible = controlsVisible && dragTargetId == null,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = Space.m),
@@ -682,7 +678,6 @@ fun NoteCanvas(
             }
         }
 
-        // Y si te has ido lejos paseando, un solo atajo para volver.
         AnimatedVisibility(
             visible = lost && dragTargetId == null,
             modifier = Modifier
@@ -697,24 +692,16 @@ fun NoteCanvas(
                     .clip(Rincon.shapes.pill)
                     .background(colors.surface)
                     .border(1.dp, colors.outlineSoft, Rincon.shapes.pill)
-                    .pressable {
-                        contentBounds?.let { boardState.fitTo(it, fitPadding) }
-                    }
+                    .pressable { contentBounds?.let { boardState.fitTo(it, fitPadding) } }
                     .padding(horizontal = Space.l, vertical = Space.m),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Space.s),
             ) {
                 RinconIcon(RinconIcons.Undo, null, tint = colors.accent, size = 20.dp)
-                Text(
-                    "Volver a mis notas",
-                    style = Rincon.type.navLabel,
-                    color = colors.textPrimary,
-                    maxLines = 1,
-                )
+                Text("Volver a mis notas", style = Rincon.type.navLabel, color = colors.textPrimary, maxLines = 1)
             }
         }
 
-        // Papelera: sólo existe mientras se arrastra, y se abre al acercarse.
         AnimatedVisibility(
             visible = dragTargetId != null,
             modifier = Modifier
@@ -723,12 +710,11 @@ fun NoteCanvas(
             enter = scaleIn(motion.gentle(), initialScale = 0.8f) + fadeIn(motion.fade()),
             exit = scaleOut(motion.snappy(), targetScale = 0.85f) + fadeOut(motion.quickFade()),
         ) {
-            val bg = if (overTrash) colors.danger else colors.surface
             Row(
                 modifier = Modifier
                     .softShadow(if (overTrash) 16.dp else 8.dp, Rincon.shapes.pill)
                     .clip(Rincon.shapes.pill)
-                    .background(bg)
+                    .background(if (overTrash) colors.danger else colors.surface)
                     .border(1.dp, colors.outlineSoft, Rincon.shapes.pill)
                     .padding(horizontal = Space.xl, vertical = Space.m),
                 verticalAlignment = Alignment.CenterVertically,
@@ -741,7 +727,7 @@ fun NoteCanvas(
                     size = 22.dp,
                 )
                 Text(
-                    if (overTrash) "Suelta para romperla" else "Tirar",
+                    if (overTrash) "Suelta" else "Tirar",
                     style = Rincon.type.navLabel,
                     color = if (overTrash) colors.accentInk else colors.textSecondary,
                     maxLines = 1,
@@ -771,40 +757,6 @@ private fun ZoomButton(
     ) {
         RinconIcon(icon, null, tint = colors.textSecondary, size = 20.dp)
     }
-}
-
-/**
- * Guías tenues del tablero.
- *
- * Sin ellas, alejar el zoom sobre un fondo liso no se siente como alejarse:
- * no hay nada que se haga pequeño. Estas líneas dan esa referencia espacial, y
- * el marco recuerda dónde termina el tablero.
- */
-private fun Modifier.boardSurface(line: Color, surface: Color): Modifier = this.drawBehind {
-    // El tablero es una superficie, no un vacío: se pinta como una mesa un
-    // punto distinta del fondo de la app, para que se vea dónde empieza y
-    // dónde acaba tu escritorio.
-    val corner = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx())
-    drawRoundRect(color = surface.copy(alpha = 0.45f), cornerRadius = corner)
-
-    val step = 96.dp.toPx()
-    val faint = line.copy(alpha = 0.30f)
-    var x = step
-    while (x < size.width) {
-        drawLine(faint, Offset(x, 0f), Offset(x, size.height), 1f)
-        x += step
-    }
-    var y = step
-    while (y < size.height) {
-        drawLine(faint, Offset(0f, y), Offset(size.width, y), 1f)
-        y += step
-    }
-
-    drawRoundRect(
-        color = line.copy(alpha = 0.9f),
-        cornerRadius = corner,
-        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
-    )
 }
 
 /**
