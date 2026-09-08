@@ -13,7 +13,9 @@ class SnapPhysicsTest {
 
     private val minX = 0f
     private val maxX = 900f
-    private val maxY = 1400f
+    // Múltiplo de la rejilla: así el tope inferior coincide con una guía y
+    // el test comprueba el límite, no el imán.
+    private val maxY = 1440f
     private val grid = 48f
     private val gap = 12f
     private val tolerance = 11f
