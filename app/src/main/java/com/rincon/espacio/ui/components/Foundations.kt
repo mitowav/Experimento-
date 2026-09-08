@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -196,7 +197,7 @@ fun ProgressTrack(
         Box(
             modifier = Modifier
                 .fillMaxWidth(animated.coerceIn(0f, 1f))
-                .fillMaxSize()
+                .fillMaxHeight()
                 .clip(RoundedCornerShape(50))
                 .background(
                     Brush.horizontalGradient(

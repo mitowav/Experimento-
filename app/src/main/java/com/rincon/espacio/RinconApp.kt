@@ -4,7 +4,6 @@ import android.app.Application
 import com.rincon.espacio.di.AppContainer
 import com.rincon.espacio.notifications.NotificationChannels
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 

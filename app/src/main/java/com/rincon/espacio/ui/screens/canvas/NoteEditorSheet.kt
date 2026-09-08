@@ -388,4 +388,3 @@ fun NoteEditorSheet(
     )
 }
 
-private fun Modifier.horizontalScroll(rememberScrollState()): Modifier = this
