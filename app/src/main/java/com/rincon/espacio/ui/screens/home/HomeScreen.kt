@@ -20,6 +20,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rincon.espacio.core.design.Rincon
 import com.rincon.espacio.core.design.Space
 import com.rincon.espacio.core.util.Dates
+import com.rincon.espacio.core.util.Phrases
 import com.rincon.espacio.domain.model.DayItem
 import com.rincon.espacio.ui.components.EmptyState
 import com.rincon.espacio.ui.components.GhostButton
@@ -72,6 +76,7 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = Rincon.colors
+    var searching by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -103,10 +108,28 @@ fun HomeScreen(
                     )
                 }
                 Spacer(Modifier.height(Space.xs))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        Dates.longDate(state.date),
+                        style = Rincon.type.body,
+                        color = colors.textSecondary,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    com.rincon.espacio.ui.components.RoundIconButton(
+                        icon = RinconIcons.Sparkle,
+                        description = "Buscar en tus notas",
+                        onClick = { searching = true },
+                    )
+                }
+                Spacer(Modifier.height(Space.m))
+                // Una línea, cambia cada día, y no pide nada a cambio.
                 Text(
-                    Dates.longDate(state.date),
-                    style = Rincon.type.body,
-                    color = colors.textSecondary,
+                    text = Phrases.forDate(state.date),
+                    style = Rincon.type.bodyStrong,
+                    color = colors.accent,
+                    modifier = Modifier.appear(1),
                 )
             }
         }
@@ -116,7 +139,7 @@ fun HomeScreen(
                 done = state.plan.doneCount,
                 total = state.plan.totalCount,
                 onClick = onOpenToday,
-                modifier = Modifier.appear(1),
+                modifier = Modifier.appear(2),
             )
         }
 
@@ -149,7 +172,7 @@ fun HomeScreen(
             // Ancho fijo y fila deslizante: repartir a partes iguales rompía
             // las palabras largas con la escala de texto del sistema alta.
             LazyRow(
-                modifier = Modifier.appear(2),
+                modifier = Modifier.appear(3),
                 horizontalArrangement = Arrangement.spacedBy(Space.m),
             ) {
                 item { QuickAccess(RinconIcons.Target, "Objetivos", onClick = onOpenGoals) }
@@ -262,7 +285,20 @@ fun HomeScreen(
             }
         }
     }
+
+    HomeSearch(
+        visible = searching,
+        notesViewModel = notesViewModel,
+        onDismiss = { searching = false },
+    )
 }
+
+@Composable
+private fun HomeSearch(
+    visible: Boolean,
+    notesViewModel: NotesViewModel,
+    onDismiss: () -> Unit,
+) = SearchSheet(visible = visible, notesViewModel = notesViewModel, onDismiss = onDismiss)
 
 @Composable
 private fun DayProgressCard(

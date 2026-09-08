@@ -8,6 +8,7 @@ import com.rincon.espacio.core.feedback.SoundIntensity
 import com.rincon.espacio.data.prefs.AppSettings
 import com.rincon.espacio.data.prefs.PreferencesRepository
 import com.rincon.espacio.data.prefs.UiDensity
+import com.rincon.espacio.notifications.ReminderTone
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -30,5 +31,6 @@ class SettingsViewModel(private val preferences: PreferencesRepository) : ViewMo
     fun setDecorations(value: Boolean) = viewModelScope.launch { preferences.setDecorations(value) }
     fun setDensity(value: UiDensity) = viewModelScope.launch { preferences.setDensity(value) }
     fun setDisplayName(value: String) = viewModelScope.launch { preferences.setDisplayName(value) }
+    fun setReminderTone(value: ReminderTone) = viewModelScope.launch { preferences.setReminderTone(value) }
     fun finishOnboarding() = viewModelScope.launch { preferences.setOnboardingDone(true) }
 }

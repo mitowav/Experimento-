@@ -38,6 +38,8 @@ import com.rincon.espacio.core.design.ThemePalette
 import com.rincon.espacio.core.feedback.LocalFeedback
 import com.rincon.espacio.core.feedback.SoundIntensity
 import com.rincon.espacio.data.prefs.UiDensity
+import com.rincon.espacio.notifications.ReminderTone
+import com.rincon.espacio.ui.components.CozyChip
 import com.rincon.espacio.ui.components.CozySwitch
 import com.rincon.espacio.ui.components.CozyTextField
 import com.rincon.espacio.ui.components.PalettePicker
@@ -221,6 +223,41 @@ fun MeScreen(
         }
 
         item { SectionHeader("Avisos") }
+
+        item {
+            PaperSurface(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(Space.l)) {
+                    Text("Tono", style = Rincon.type.label, color = colors.textSecondary)
+                    Spacer(Modifier.height(Space.xs))
+                    Text(
+                        settings.reminderTone.description,
+                        style = Rincon.type.caption,
+                        color = colors.textMuted,
+                    )
+                    Spacer(Modifier.height(Space.m))
+                    // Se escucha al tocarlo: elegir un tono sin oírlo es
+                    // elegir a ciegas.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Space.s),
+                    ) {
+                        ReminderTone.entries.forEach { tone ->
+                            CozyChip(
+                                label = tone.label,
+                                selected = settings.reminderTone == tone,
+                                icon = RinconIcons.Bell,
+                                onClick = {
+                                    viewModel.setReminderTone(tone)
+                                    feedback.previewTone(tone.rawRes)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         item {
             PaperSurface(Modifier.fillMaxWidth()) {

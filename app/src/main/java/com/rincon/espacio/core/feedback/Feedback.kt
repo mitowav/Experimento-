@@ -46,6 +46,8 @@ interface Feedback {
     fun click()
     /** Romper algo: papel rasgándose. */
     fun tear()
+    /** Escuchar un tono de aviso antes de elegirlo. */
+    fun previewTone(rawRes: Int)
 }
 
 /** Implementación inerte: útil en previews y tests. */
@@ -61,6 +63,7 @@ object NoFeedback : Feedback {
     override fun warn() = Unit
     override fun click() = Unit
     override fun tear() = Unit
+    override fun previewTone(rawRes: Int) = Unit
 }
 
 val LocalFeedback = staticCompositionLocalOf<Feedback> { NoFeedback }
@@ -186,6 +189,25 @@ class FeedbackController(context: Context) : Feedback {
     override fun tear() {
         play(R.raw.sfx_tear, 0.9f, rate = 0.95f + Math.random().toFloat() * 0.1f)
         vibratePattern(longArrayOf(0, 18, 30, 26), intArrayOf(0, 120, 0, 90))
+    }
+
+    /**
+     * Los tonos de aviso se cargan la primera vez que se escuchan: son los
+     * ficheros más pesados y no tiene sentido tenerlos en memoria si nadie
+     * abre los ajustes. Suenan al volumen real del aviso, no al de la
+     * interfaz: hay que poder juzgarlos.
+     */
+    override fun previewTone(rawRes: Int) {
+        val id = loaded[rawRes] ?: soundPool.load(appContext, rawRes, 1).also {
+            loaded[rawRes] = it
+            // Se reproduce en cuanto termine de cargar.
+            soundPool.setOnLoadCompleteListener { pool, sampleId, status ->
+                ready = true
+                if (sampleId == it && status == 0) pool.play(sampleId, 0.85f, 0.85f, 1, 0, 1f)
+            }
+            return
+        }
+        soundPool.play(id, 0.85f, 0.85f, 1, 0, 1f)
     }
 
     fun release() {

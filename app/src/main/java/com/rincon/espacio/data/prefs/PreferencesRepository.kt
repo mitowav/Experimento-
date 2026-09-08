@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.rincon.espacio.core.design.ThemeMode
 import com.rincon.espacio.core.design.ThemePalette
 import com.rincon.espacio.core.feedback.SoundIntensity
+import com.rincon.espacio.notifications.ReminderTone
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -49,6 +50,7 @@ data class AppSettings(
     val density: UiDensity = UiDensity.Comfortable,
     val onboardingDone: Boolean = false,
     val displayName: String = "",
+    val reminderTone: ReminderTone = ReminderTone.Campana,
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "rincon_settings")
@@ -72,6 +74,7 @@ class PreferencesRepository(context: Context) {
         val deskOffsetX = floatPreferencesKey("desk_offset_x")
         val deskOffsetY = floatPreferencesKey("desk_offset_y")
         val lastTab = stringPreferencesKey("last_tab")
+        val reminderTone = stringPreferencesKey("reminder_tone")
     }
 
     val deskView: Flow<DeskView> = store.data.map { p ->
@@ -103,6 +106,7 @@ class PreferencesRepository(context: Context) {
             density = UiDensity.fromKey(p[Keys.density]),
             onboardingDone = p[Keys.onboarding] ?: false,
             displayName = p[Keys.displayName].orEmpty(),
+            reminderTone = ReminderTone.fromKey(p[Keys.reminderTone]),
         )
     }
 
@@ -116,4 +120,5 @@ class PreferencesRepository(context: Context) {
     suspend fun setDensity(value: UiDensity) = store.edit { it[Keys.density] = value.name }
     suspend fun setOnboardingDone(value: Boolean) = store.edit { it[Keys.onboarding] = value }
     suspend fun setDisplayName(value: String) = store.edit { it[Keys.displayName] = value.trim() }
+    suspend fun setReminderTone(value: ReminderTone) = store.edit { it[Keys.reminderTone] = value.name }
 }

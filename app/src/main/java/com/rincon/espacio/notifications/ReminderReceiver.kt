@@ -15,6 +15,7 @@ import com.rincon.espacio.di.AppContainer
 import com.rincon.espacio.di.launchSafely
 import com.rincon.espacio.domain.model.Reminder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 /** Recibe el disparo de una alarma, muestra el aviso y programa la siguiente. */
@@ -30,7 +31,10 @@ class ReminderReceiver : BroadcastReceiver() {
         container.applicationScope.launchSafely(pending) {
             val reminder = withContext(Dispatchers.IO) { container.reminderRepository.byId(reminderId) }
             if (reminder != null && reminder.enabled) {
-                notify(context, reminder)
+                val tone = withContext(Dispatchers.IO) {
+                    ReminderTone.fromKey(container.preferences.settings.first().reminderTone.name)
+                }
+                notify(context, reminder, tone)
                 withContext(Dispatchers.IO) {
                     container.reminderRepository.advanceAfterFire(reminderId, System.currentTimeMillis())
                 }
@@ -38,7 +42,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun notify(context: Context, reminder: Reminder) {
+    private fun notify(context: Context, reminder: Reminder, tone: ReminderTone) {
         NotificationChannels.ensure(context)
 
         val granted = ContextCompat.checkSelfPermission(
@@ -61,7 +65,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(
             context,
-            NotificationChannels.channelFor(reminder.sound, reminder.vibrate),
+            NotificationChannels.channelFor(reminder.sound, reminder.vibrate, tone),
         )
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(reminder.title)
