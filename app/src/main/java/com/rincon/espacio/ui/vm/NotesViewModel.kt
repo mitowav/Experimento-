@@ -243,7 +243,13 @@ class NotesViewModel(
                     },
                     iconKey = current.note.iconKey,
                     triggerAtMillis = triggerAt,
-                    repeat = current.repeat,
+                    // El aviso sigue el ritmo de la tarea: si ella vuelve
+                    // cada semana, él también.
+                    repeat = if (current.note.repeat != RepeatRule.Once) {
+                        current.note.repeat
+                    } else {
+                        current.repeat
+                    },
                     leadMinutes = current.leadMinutes,
                     enabled = true,
                     sound = current.reminderSound,

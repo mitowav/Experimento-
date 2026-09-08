@@ -6,6 +6,7 @@ import com.rincon.espacio.data.local.entity.SubtaskEntity
 import com.rincon.espacio.domain.model.Note
 import com.rincon.espacio.domain.model.NoteWithSubtasks
 import com.rincon.espacio.domain.model.ReminderTarget
+import com.rincon.espacio.domain.model.RepeatRule
 import com.rincon.espacio.domain.model.Subtask
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -63,8 +64,44 @@ class NoteRepository(
         dao.updatePlacement(id, x, y, rotation, zIndex, System.currentTimeMillis())
     }
 
-    suspend fun setDone(id: Long, done: Boolean) {
-        dao.setDone(id, done, System.currentTimeMillis())
+    /**
+     * Marcar como hecha.
+     *
+     * Una tarea que se repite no se queda tachada: salta a su siguiente fecha
+     * y vuelve pendiente, arrastrando consigo su aviso. Es lo que uno espera de
+     * "beber agua" o "sacar la basura" — que reaparezca, no que desaparezca.
+     *
+     * Devuelve `true` si la tarea ha viajado en vez de completarse.
+     */
+    suspend fun setDone(id: Long, done: Boolean): Boolean {
+        val now = System.currentTimeMillis()
+        val current = dao.byId(id)?.toDomain()
+
+        if (done && current != null && current.repeat != RepeatRule.Once) {
+            val from = current.dueDate ?: Dates.today()
+            val next = current.repeat.nextDate(from)
+            if (next != null) {
+                dao.update(current.copy(dueDate = next, done = false, updatedAt = now).toEntity())
+                moveReminderTo(current, next)
+                return true
+            }
+        }
+
+        dao.setDone(id, done, now)
+        return false
+    }
+
+    /** El aviso viaja con la tarea: si no, sonaría por una fecha que ya pasó. */
+    private suspend fun moveReminderTo(note: Note, date: java.time.LocalDate) {
+        val reminderId = note.reminderId ?: return
+        val time = note.dueTime ?: return
+        val reminder = reminders.byId(reminderId) ?: return
+        reminders.save(
+            reminder.copy(
+                triggerAtMillis = Dates.millisOf(date, time) - reminder.leadMinutes * 60_000L,
+                enabled = true,
+            )
+        )
     }
 
     suspend fun delete(id: Long) {

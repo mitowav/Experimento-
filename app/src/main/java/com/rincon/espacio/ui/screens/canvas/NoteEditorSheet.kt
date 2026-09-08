@@ -222,6 +222,39 @@ fun NoteEditorSheet(
                         }
 
                         AnimatedVisibility(
+                            visible = draft.note.isTask && draft.note.dueDate != null,
+                            enter = expandVertically(Rincon.motion.sizeSpring()) + fadeIn(Rincon.motion.fade()),
+                            exit = shrinkVertically(Rincon.motion.sizeSpring()) + fadeOut(Rincon.motion.quickFade()),
+                        ) {
+                            Column {
+                                Spacer(Modifier.height(Space.l))
+                                FieldLabel("Se repite")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(Space.s),
+                                ) {
+                                    RepeatRule.entries.forEach { rule ->
+                                        CozyChip(
+                                            label = if (rule == RepeatRule.Once) "No" else rule.label,
+                                            selected = draft.note.repeat == rule,
+                                            onClick = { viewModel.editNote { it.copy(repeat = rule) } },
+                                        )
+                                    }
+                                }
+                                if (draft.note.repeat != RepeatRule.Once) {
+                                    Spacer(Modifier.height(Space.s))
+                                    Text(
+                                        "Al marcarla, volverá sola en su próxima fecha.",
+                                        style = Rincon.type.caption,
+                                        color = colors.textMuted,
+                                    )
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
                             visible = draft.note.dueDate != null && draft.note.dueTime != null,
                             enter = expandVertically(Rincon.motion.sizeSpring()) + fadeIn(Rincon.motion.fade()),
                             exit = shrinkVertically(Rincon.motion.sizeSpring()) + fadeOut(Rincon.motion.quickFade()),
@@ -261,19 +294,7 @@ fun NoteEditorSheet(
                                             step = 5,
                                         )
                                         Spacer(Modifier.height(Space.m))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(Space.s),
-                                        ) {
-                                            listOf(RepeatRule.Once, RepeatRule.Daily, RepeatRule.Weekly).forEach { rule ->
-                                                CozyChip(
-                                                    label = rule.label,
-                                                    selected = draft.repeat == rule,
-                                                    onClick = { viewModel.editDraft { it.copy(repeat = rule) } },
-                                                    modifier = Modifier.weight(1f),
-                                                )
-                                            }
-                                        }
+
                                     }
                                 }
                             }

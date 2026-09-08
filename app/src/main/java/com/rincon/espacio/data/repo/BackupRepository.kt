@@ -129,6 +129,7 @@ private fun noteToJson(e: NoteEntity) = JSONObject().apply {
     put("esTarea", e.isTask); put("hecha", e.done); put("fijada", e.pinned)
     put("prioridad", e.priority); put("fecha", e.dueDate); put("hora", e.dueTime)
     put("objetivo", e.goalId); put("asignatura", e.subjectId); put("aviso", e.reminderId)
+    put("repite", e.repeatRule)
     put("creada", e.createdAt); put("modificada", e.updatedAt); put("archivada", e.archived)
 }
 
@@ -141,7 +142,8 @@ private fun JSONObject.toNote() = NoteEntity(
     pinned = optBoolean("fijada"), priority = optString("prioridad", "Normal"),
     dueDate = longOrNull("fecha"), dueTime = intOrNull("hora"),
     goalId = longOrNull("objetivo"), subjectId = longOrNull("asignatura"),
-    reminderId = longOrNull("aviso"), createdAt = optLong("creada"),
+    reminderId = longOrNull("aviso"), repeatRule = optString("repite", "Once"),
+    createdAt = optLong("creada"),
     updatedAt = optLong("modificada"), archived = optBoolean("archivada"),
 )
 

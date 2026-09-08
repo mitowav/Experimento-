@@ -43,6 +43,8 @@ data class Note(
     val goalId: Long? = null,
     val subjectId: Long? = null,
     val reminderId: Long? = null,
+    /** Si se repite, al completarla la tarea salta a su siguiente fecha. */
+    val repeat: RepeatRule = RepeatRule.Once,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
     val archived: Boolean = false,
@@ -233,6 +235,30 @@ enum class RepeatRule(val label: String) {
     Weekdays("De lunes a viernes"),
     Weekly("Cada semana"),
     Monthly("Cada mes");
+
+    /**
+     * Siguiente fecha en la que toca, contando desde [from].
+     *
+     * Se calcula siempre hacia delante desde hoy y no desde la fecha original:
+     * si una tarea diaria lleva una semana sin marcarse, al completarla debe
+     * saltar a mañana, no arrastrar seis días de retraso.
+     */
+    fun nextDate(from: LocalDate, today: LocalDate = LocalDate.now()): LocalDate? {
+        if (this == Once) return null
+        val anchor = if (from.isBefore(today)) today else from
+        var next = when (this) {
+            Daily, Weekdays -> anchor.plusDays(1)
+            Weekly -> anchor.plusWeeks(1)
+            Monthly -> anchor.plusMonths(1)
+            Once -> return null
+        }
+        if (this == Weekdays) {
+            while (next.dayOfWeek == DayOfWeek.SATURDAY || next.dayOfWeek == DayOfWeek.SUNDAY) {
+                next = next.plusDays(1)
+            }
+        }
+        return next
+    }
 
     companion object {
         fun fromKey(key: String?): RepeatRule = entries.firstOrNull { it.name == key } ?: Once

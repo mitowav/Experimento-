@@ -38,7 +38,7 @@ import com.rincon.espacio.data.local.entity.SubtaskEntity
         EventEntity::class,
         ReminderEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class RinconDatabase : RoomDatabase() {
@@ -67,9 +67,16 @@ abstract class RinconDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: las tareas pueden repetirse. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN repeatRule TEXT NOT NULL DEFAULT 'Once'")
+            }
+        }
+
         fun build(context: Context): RinconDatabase =
             Room.databaseBuilder(context, RinconDatabase::class.java, "rincon.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
     }

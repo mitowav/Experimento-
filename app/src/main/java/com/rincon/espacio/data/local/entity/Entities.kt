@@ -26,6 +26,7 @@ data class NoteEntity(
     val goalId: Long?,
     val subjectId: Long?,
     val reminderId: Long?,
+    val repeatRule: String,
     val createdAt: Long,
     val updatedAt: Long,
     val archived: Boolean,
