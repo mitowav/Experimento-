@@ -1,5 +1,7 @@
 package com.rincon.espacio.core.design
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -11,6 +13,7 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 
 /** Modo de color elegido por la persona usuaria. */
@@ -52,7 +55,11 @@ fun RinconTheme(
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
     }
-    val colors = remember(palette, dark) { palette.colors(dark) }
+    val target = remember(palette, dark) { palette.colors(dark) }
+    // Pasar de claro a oscuro de golpe es un fogonazo en la cara. Cada color
+    // del tema viaja a su nuevo valor en medio segundo, así que el cambio se
+    // vive como si alguien bajara la luz de la habitación.
+    val colors = animatedColors(target, reduceMotion)
     val typography = remember { RinconTypography() }
     val shapes = remember { RinconShapes() }
     val motion = remember(reduceMotion) { RinconMotion(reduceMotion) }
@@ -101,6 +108,40 @@ fun RinconTheme(
             content = content,
         )
     }
+}
+
+@Composable
+private fun animatedColors(target: RinconColors, reduceMotion: Boolean): RinconColors {
+    val duration = if (reduceMotion) 120 else 520
+    val spec = remember(duration) { tween<Color>(duration, easing = RinconMotion.StandardEasing) }
+
+    @Composable
+    fun fade(value: Color, label: String): Color =
+        animateColorAsState(targetValue = value, animationSpec = spec, label = label).value
+
+    return RinconColors(
+        background = fade(target.background, "background"),
+        backgroundTop = fade(target.backgroundTop, "backgroundTop"),
+        surface = fade(target.surface, "surface"),
+        surfaceRaised = fade(target.surfaceRaised, "surfaceRaised"),
+        surfaceSunken = fade(target.surfaceSunken, "surfaceSunken"),
+        outline = fade(target.outline, "outline"),
+        outlineSoft = fade(target.outlineSoft, "outlineSoft"),
+        textPrimary = fade(target.textPrimary, "textPrimary"),
+        textSecondary = fade(target.textSecondary, "textSecondary"),
+        textMuted = fade(target.textMuted, "textMuted"),
+        accent = fade(target.accent, "accent"),
+        accentInk = fade(target.accentInk, "accentInk"),
+        accentSoft = fade(target.accentSoft, "accentSoft"),
+        success = fade(target.success, "success"),
+        successSoft = fade(target.successSoft, "successSoft"),
+        warning = fade(target.warning, "warning"),
+        danger = fade(target.danger, "danger"),
+        shadow = fade(target.shadow, "shadow"),
+        // El modo sí cambia de golpe: decide qué tinta usa el papel, y una
+        // tinta a medio camino no se leería bien durante la transición.
+        isDark = target.isDark,
+    )
 }
 
 private fun materialTypographyFrom(t: RinconTypography): Typography {

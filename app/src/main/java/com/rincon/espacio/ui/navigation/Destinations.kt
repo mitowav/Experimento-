@@ -22,9 +22,12 @@ enum class TabDestination(
     val label: String,
     val icon: ImageVector,
 ) {
+    // Etiquetas cortas a propósito: con la escala de texto grande del
+    // sistema, "Escritorio" o "Calendario" no caben en una quinta parte de la
+    // pantalla y se parten. El nombre largo vive en el título de cada pantalla.
     Home(Routes.HOME, "Inicio", RinconIcons.Home),
-    Desk(Routes.DESK, "Escritorio", RinconIcons.Note),
+    Desk(Routes.DESK, "Notas", RinconIcons.Note),
     Today(Routes.TODAY, "Hoy", RinconIcons.Sun),
-    Calendar(Routes.CALENDAR, "Calendario", RinconIcons.Calendar),
+    Calendar(Routes.CALENDAR, "Agenda", RinconIcons.Calendar),
     Me(Routes.ME, "Yo", RinconIcons.Person),
 }

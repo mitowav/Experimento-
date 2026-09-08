@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import com.rincon.espacio.core.design.Rincon
 import com.rincon.espacio.core.design.Space
 import com.rincon.espacio.core.feedback.LocalFeedback
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Compresión elástica al pulsar.
@@ -126,6 +129,15 @@ fun PaperSurface(
             .softShadow(elevation, shape)
             .clip(shape)
             .background(color)
+            // Un hilo de luz en el canto superior. Es lo que convierte un
+            // rectángulo de color en una superficie con grosor: el ojo lee el
+            // borde iluminado como el canto de algo que sobresale.
+            .background(
+                Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = if (colors.isDark) 0.055f else 0.5f),
+                    0.035f to Color.Transparent,
+                )
+            )
             .then(
                 if (border) Modifier.border(1.dp, colors.outlineSoft, shape) else Modifier
             )
@@ -160,12 +172,15 @@ fun SectionHeader(
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(Space.m),
     ) {
         Text(
             text = title,
             style = Rincon.type.section,
             color = Rincon.colors.textPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
         trailing?.invoke()
     }
@@ -218,6 +233,7 @@ fun CozyChip(
     accent: Color = Rincon.colors.accent,
 ) {
     val colors = Rincon.colors
+    val feedback = LocalFeedback.current
     val bg = if (selected) accent else colors.surfaceSunken
     val fg = if (selected) colors.accentInk else colors.textSecondary
     Row(
@@ -225,14 +241,21 @@ fun CozyChip(
             .clip(Rincon.shapes.pill)
             .background(bg)
             .border(1.dp, if (selected) Color.Transparent else colors.outlineSoft, Rincon.shapes.pill)
-            .pressable(onClick = onClick)
-            .defaultMinSize(minHeight = 40.dp)
-            .padding(horizontal = Space.l, vertical = Space.s),
+            .pressable(hapticOnPress = false) { feedback.click(); onClick() }
+            .defaultMinSize(minHeight = 42.dp)
+            .padding(horizontal = Space.m, vertical = Space.s),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.s),
+        horizontalArrangement = Arrangement.spacedBy(Space.xs),
     ) {
         if (icon != null) RinconIcon(icon, null, tint = fg, size = 18.dp)
-        Text(label, style = Rincon.type.label, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            style = Rincon.type.navLabel,
+            color = fg,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -261,7 +284,13 @@ fun PrimaryButton(
             RinconIcon(icon, null, tint = colors.accentInk, size = 20.dp)
             Spacer(Modifier.width(Space.s))
         }
-        Text(label, style = Rincon.type.bodyStrong, color = colors.accentInk)
+        Text(
+            label,
+            style = Rincon.type.bodyStrong,
+            color = colors.accentInk,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -287,7 +316,13 @@ fun GhostButton(
             RinconIcon(icon, null, tint = tint, size = 20.dp)
             Spacer(Modifier.width(Space.s))
         }
-        Text(label, style = Rincon.type.bodyStrong, color = tint)
+        Text(
+            label,
+            style = Rincon.type.bodyStrong,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -428,4 +463,42 @@ fun CozyBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
     ) {
         content()
     }
+}
+
+/**
+ * Entrada escalonada de un bloque de interfaz.
+ *
+ * Cada sección aparece subiendo un poco y ganando opacidad, con un retardo
+ * proporcional a su posición. El efecto no es decorativo: comunica el orden de
+ * lectura de la pantalla, de arriba abajo, en menos de medio segundo. Con
+ * "reducir movimiento" el desplazamiento casi desaparece y el retardo se anula.
+ */
+@Composable
+fun Modifier.appear(index: Int = 0, key: Any? = Unit): Modifier {
+    val motion = Rincon.motion
+    val density = LocalDensity.current
+    val progress = remember(key) { Animatable(0f) }
+    LaunchedEffect(key) {
+        progress.snapTo(0f)
+        progress.animateTo(1f, motion.appear(index))
+    }
+    return this.graphicsLayer {
+        alpha = progress.value
+        translationY = with(density) { motion.appearOffsetDp.dp.toPx() } * (1f - progress.value)
+    }
+}
+
+/**
+ * Contador que cambia de valor con una animación en lugar de saltar.
+ * Se usa en los porcentajes de progreso, donde ver el número subir es parte de
+ * la recompensa.
+ */
+@Composable
+fun animatedCount(target: Int): Int {
+    val value by animateFloatAsState(
+        targetValue = target.toFloat(),
+        animationSpec = Rincon.motion.gentle(),
+        label = "count",
+    )
+    return value.roundToInt()
 }

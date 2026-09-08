@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +42,8 @@ import com.rincon.espacio.ui.components.ProgressTrack
 import com.rincon.espacio.ui.components.RinconIcon
 import com.rincon.espacio.ui.components.SectionHeader
 import com.rincon.espacio.ui.components.TaskRow
+import com.rincon.espacio.ui.components.animatedCount
+import com.rincon.espacio.ui.components.appear
 import com.rincon.espacio.ui.components.pressable
 import com.rincon.espacio.ui.components.softShadow
 import com.rincon.espacio.ui.icons.RinconIcons
@@ -79,7 +83,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(Space.l),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = Space.l)) {
+            Column(Modifier.statusBarsPadding().padding(top = Space.l).appear(0)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = buildString {
@@ -112,6 +116,7 @@ fun HomeScreen(
                 done = state.plan.doneCount,
                 total = state.plan.totalCount,
                 onClick = onOpenToday,
+                modifier = Modifier.appear(1),
             )
         }
 
@@ -141,11 +146,16 @@ fun HomeScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                QuickAccess(RinconIcons.Target, "Objetivos", Modifier.weight(1f), onOpenGoals)
-                QuickAccess(RinconIcons.Leaf, "Hábitos", Modifier.weight(1f), onOpenHabits)
-                QuickAccess(RinconIcons.Book, "Estudio", Modifier.weight(1f), onOpenStudy)
-                QuickAccess(RinconIcons.Calendar, "Agenda", Modifier.weight(1f), onOpenCalendar)
+            // Ancho fijo y fila deslizante: repartir a partes iguales rompía
+            // las palabras largas con la escala de texto del sistema alta.
+            LazyRow(
+                modifier = Modifier.appear(2),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                item { QuickAccess(RinconIcons.Target, "Objetivos", onClick = onOpenGoals) }
+                item { QuickAccess(RinconIcons.Leaf, "Hábitos", onClick = onOpenHabits) }
+                item { QuickAccess(RinconIcons.Book, "Estudio", onClick = onOpenStudy) }
+                item { QuickAccess(RinconIcons.Calendar, "Agenda", onClick = onOpenCalendar) }
             }
         }
 
@@ -255,11 +265,16 @@ fun HomeScreen(
 }
 
 @Composable
-private fun DayProgressCard(done: Int, total: Int, onClick: () -> Unit) {
+private fun DayProgressCard(
+    done: Int,
+    total: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = Rincon.colors
     val progress = if (total == 0) 0f else done.toFloat() / total
     PaperSurface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = 10.dp,
     ) {
         Column(Modifier.fillMaxWidth().pressable(onClick = onClick).padding(Space.xl)) {
@@ -276,10 +291,12 @@ private fun DayProgressCard(done: Int, total: Int, onClick: () -> Unit) {
                         color = colors.textSecondary,
                     )
                 }
+                // El número sube contando, no salta: el progreso se ve avanzar.
                 Text(
-                    "${(progress * 100).toInt()}%",
+                    "${animatedCount((progress * 100).toInt())}%",
                     style = Rincon.type.numeral,
                     color = colors.accent,
+                    maxLines = 1,
                 )
             }
             Spacer(Modifier.height(Space.l))
@@ -296,12 +313,12 @@ private fun QuickAccess(
     onClick: () -> Unit,
 ) {
     val colors = Rincon.colors
-    PaperSurface(modifier = modifier, elevation = 4.dp) {
+    PaperSurface(modifier = modifier.width(96.dp), elevation = 4.dp) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .pressable(onClick = onClick)
-                .padding(vertical = Space.m),
+                .padding(horizontal = Space.s, vertical = Space.m),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
@@ -314,7 +331,15 @@ private fun QuickAccess(
                 RinconIcon(icon, null, tint = colors.accent, size = 22.dp)
             }
             Spacer(Modifier.height(Space.xs))
-            Text(label, style = Rincon.type.caption, color = colors.textSecondary, maxLines = 1)
+            Text(
+                label,
+                style = Rincon.type.navLabel,
+                color = colors.textSecondary,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

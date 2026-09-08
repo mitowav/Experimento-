@@ -30,6 +30,7 @@ class RinconViewModelFactory(private val container: AppContainer) : ViewModelPro
             NotesViewModel::class.java -> NotesViewModel(
                 notes = container.noteRepository,
                 reminders = container.reminderRepository,
+                preferences = container.preferences,
                 study = container.studyRepository,
                 goals = container.goalRepository,
             )

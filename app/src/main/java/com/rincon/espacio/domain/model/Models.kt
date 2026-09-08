@@ -27,6 +27,8 @@ data class Note(
     val text: String = "",
     val colorKey: String = "Butter",
     val iconKey: String = "note",
+    val styleKey: String = "Plain",
+    /** Posición en el tablero, en dp absolutos (no fracción de pantalla). */
     val x: Float = 0f,
     val y: Float = 0f,
     val rotation: Float = 0f,

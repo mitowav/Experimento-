@@ -1,5 +1,11 @@
 package com.rincon.espacio.ui.screens.today
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rincon.espacio.core.design.Rincon
 import com.rincon.espacio.core.design.Space
+import com.rincon.espacio.core.feedback.LocalFeedback
 import com.rincon.espacio.core.util.Dates
 import com.rincon.espacio.domain.model.DayItem
 import com.rincon.espacio.ui.components.EmptyState
@@ -35,6 +42,8 @@ import com.rincon.espacio.ui.components.RoundIconButton
 import com.rincon.espacio.ui.components.SectionHeader
 import com.rincon.espacio.ui.components.SwipeableRow
 import com.rincon.espacio.ui.components.TaskRow
+import com.rincon.espacio.ui.components.animatedCount
+import com.rincon.espacio.ui.components.appear
 import com.rincon.espacio.ui.icons.RinconIcons
 import com.rincon.espacio.ui.screens.home.DayItemRow
 import com.rincon.espacio.ui.vm.NotesViewModel
@@ -59,7 +68,9 @@ fun TodayScreen(
     val deskState by notesViewModel.state.collectAsStateWithLifecycle()
     val draft by notesViewModel.draft.collectAsStateWithLifecycle()
     val colors = Rincon.colors
+    val feedback = LocalFeedback.current
     val today = Dates.today()
+    val motion = Rincon.motion
 
     Box(modifier.fillMaxSize()) {
         LazyColumn(
@@ -72,37 +83,63 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(Space.m),
         ) {
             item {
-                Column(Modifier.statusBarsPadding().padding(top = Space.l)) {
+                Column(Modifier.statusBarsPadding().padding(top = Space.l).appear(0)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = Dates.relative(date, today),
-                                style = Rincon.type.display,
-                                color = colors.textPrimary,
-                            )
-                            Text(
-                                Dates.longDate(date),
-                                style = Rincon.type.body,
-                                color = colors.textSecondary,
-                            )
+                        // Cambiar de día desliza el encabezado en la dirección
+                        // del viaje: se entiende hacia dónde te has movido sin
+                        // tener que leer la fecha.
+                        AnimatedContent(
+                            targetState = date,
+                            modifier = Modifier.weight(1f),
+                            transitionSpec = {
+                                val forward = targetState.isAfter(initialState)
+                                val enter = slideInHorizontally(motion.appear()) {
+                                    if (forward) it / 3 else -it / 3
+                                } + fadeIn(motion.fade())
+                                val exit = slideOutHorizontally(motion.appear()) {
+                                    if (forward) -it / 3 else it / 3
+                                } + fadeOut(motion.quickFade())
+                                enter togetherWith exit
+                            },
+                            label = "day",
+                        ) { shown ->
+                            Column {
+                                Text(
+                                    text = Dates.relative(shown, today),
+                                    style = Rincon.type.display,
+                                    color = colors.textPrimary,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    Dates.longDate(shown),
+                                    style = Rincon.type.body,
+                                    color = colors.textSecondary,
+                                    maxLines = 1,
+                                )
+                            }
                         }
-                        RoundIconButton(RinconIcons.ChevronLeft, "Día anterior", onClick = { viewModel.shiftDays(-1) })
                         Spacer(Modifier.width(Space.s))
-                        RoundIconButton(RinconIcons.ChevronRight, "Día siguiente", onClick = { viewModel.shiftDays(1) })
+                        RoundIconButton(RinconIcons.ChevronLeft, "Día anterior", onClick = {
+                            feedback.click(); viewModel.shiftDays(-1)
+                        })
+                        Spacer(Modifier.width(Space.s))
+                        RoundIconButton(RinconIcons.ChevronRight, "Día siguiente", onClick = {
+                            feedback.click(); viewModel.shiftDays(1)
+                        })
                     }
                     if (date != today) {
                         Spacer(Modifier.height(Space.s))
                         com.rincon.espacio.ui.components.GhostButton(
                             label = "Volver a hoy",
                             icon = RinconIcons.Undo,
-                            onClick = { viewModel.goTo(today) },
+                            onClick = { feedback.click(); viewModel.goTo(today) },
                         )
                     }
                 }
             }
 
             item {
-                PaperSurface(Modifier.fillMaxWidth(), elevation = 8.dp) {
+                PaperSurface(Modifier.fillMaxWidth().appear(1), elevation = 8.dp) {
                     Column(Modifier.padding(Space.xl)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -113,9 +150,10 @@ fun TodayScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
-                                "${(plan.progress * 100).toInt()}%",
+                                "${animatedCount((plan.progress * 100).toInt())}%",
                                 style = Rincon.type.section,
                                 color = colors.accent,
+                                maxLines = 1,
                             )
                         }
                         Spacer(Modifier.height(Space.m))
@@ -139,6 +177,9 @@ fun TodayScreen(
                 }
             } else {
                 items(upcoming, key = { it.id }) { item ->
+                    // Al completar o borrar, la lista se recoloca deslizándose;
+                    // nada aparece ni desaparece de golpe.
+                    Box(Modifier.animateItem()) {
                     when (item) {
                         is DayItem.TaskItem -> SwipeableRow(
                             onSwipeRight = { viewModel.toggleTask(item.note.id, !item.note.done) },
@@ -158,6 +199,7 @@ fun TodayScreen(
                             onSwipeLeft = null,
                         ) { DayItemRow(item) }
                         else -> DayItemRow(item)
+                    }
                     }
                 }
             }

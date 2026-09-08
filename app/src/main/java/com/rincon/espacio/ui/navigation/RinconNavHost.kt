@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -41,7 +44,12 @@ import com.rincon.espacio.ui.vm.SettingsViewModel
 import com.rincon.espacio.ui.vm.StudyViewModel
 import com.rincon.espacio.ui.vm.TodayViewModel
 
-private val BottomBarHeight = 86.dp
+/**
+ * Altura de arranque de la barra. Sólo se usa durante el primer fotograma:
+ * en cuanto la barra se dibuja informa de su altura real, que depende de la
+ * barra del sistema y de la escala de texto del teléfono.
+ */
+private val InitialBottomBarHeight = 92.dp
 
 /**
  * Navegación.
@@ -66,6 +74,8 @@ fun RinconNavHost(
 
     // Se comparten entre pantallas: el editor de notas vive en varias.
     val notesViewModel: NotesViewModel = viewModel(factory = factory)
+
+    var bottomBarHeight by remember { mutableStateOf(InitialBottomBarHeight) }
 
     CozyBackground(modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize()) {
@@ -97,12 +107,12 @@ fun RinconNavHost(
                         onOpenHabits = { navController.navigate(Routes.HABITS) },
                         onOpenStudy = { navController.navigate(Routes.STUDY) },
                         onOpenCalendar = { navController.switchTab(Routes.CALENDAR) },
-                        bottomInset = BottomBarHeight,
+                        bottomInset = bottomBarHeight,
                     )
                 }
 
                 composable(Routes.DESK) {
-                    DeskScreen(viewModel = notesViewModel, bottomInset = BottomBarHeight)
+                    DeskScreen(viewModel = notesViewModel, bottomInset = bottomBarHeight)
                 }
 
                 composable(Routes.TODAY) {
@@ -110,7 +120,7 @@ fun RinconNavHost(
                     TodayScreen(
                         viewModel = vm,
                         notesViewModel = notesViewModel,
-                        bottomInset = BottomBarHeight,
+                        bottomInset = bottomBarHeight,
                     )
                 }
 
@@ -119,7 +129,7 @@ fun RinconNavHost(
                     CalendarScreen(
                         viewModel = vm,
                         notesViewModel = notesViewModel,
-                        bottomInset = BottomBarHeight,
+                        bottomInset = bottomBarHeight,
                     )
                 }
 
@@ -129,7 +139,7 @@ fun RinconNavHost(
                         onOpenGoals = { navController.navigate(Routes.GOALS) },
                         onOpenHabits = { navController.navigate(Routes.HABITS) },
                         onOpenStudy = { navController.navigate(Routes.STUDY) },
-                        bottomInset = BottomBarHeight,
+                        bottomInset = bottomBarHeight,
                     )
                 }
 
@@ -170,6 +180,7 @@ fun RinconNavHost(
                     current = currentRoute,
                     onSelect = { tab -> navController.switchTab(tab.route) },
                     modifier = Modifier.align(Alignment.BottomCenter),
+                    onHeightChanged = { bottomBarHeight = it },
                 )
             }
         }

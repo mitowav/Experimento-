@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.rincon.espacio.core.design.PaperColor
 import com.rincon.espacio.core.design.Rincon
 import com.rincon.espacio.core.design.Space
+import com.rincon.espacio.core.feedback.LocalFeedback
 import com.rincon.espacio.domain.model.Priority
 import com.rincon.espacio.ui.icons.RinconIcons
 
@@ -105,6 +106,7 @@ fun PaperColorPicker(
     modifier: Modifier = Modifier,
 ) {
     val dark = Rincon.colors.isDark
+    val feedback = LocalFeedback.current
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Space.m),
@@ -129,7 +131,7 @@ fun PaperColorPicker(
                         color = if (isSelected) color.ink(dark).copy(alpha = 0.65f) else color.edge(dark),
                         shape = RoundedCornerShape(18.dp),
                     )
-                    .pressable(hapticOnPress = false) { onSelect(color.name) }
+                    .pressable(hapticOnPress = false) { feedback.click(); onSelect(color.name) }
                     .semantics { contentDescription = "Color ${color.label}" },
                 contentAlignment = Alignment.Center,
             ) {
@@ -148,6 +150,7 @@ fun IconPicker(
     modifier: Modifier = Modifier,
 ) {
     val colors = Rincon.colors
+    val feedback = LocalFeedback.current
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Space.s),
@@ -166,7 +169,7 @@ fun IconPicker(
                     .clip(RoundedCornerShape(16.dp))
                     .background(bg)
                     .border(1.dp, if (isSelected) Color.Transparent else colors.outlineSoft, RoundedCornerShape(16.dp))
-                    .pressable(hapticOnPress = false) { onSelect(key) }
+                    .pressable(hapticOnPress = false) { feedback.click(); onSelect(key) }
                     .semantics { contentDescription = RinconIcons.labelFor(key) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -212,6 +215,7 @@ fun <T> SegmentedControl(
     modifier: Modifier = Modifier,
 ) {
     val colors = Rincon.colors
+    val feedback = LocalFeedback.current
     Row(
         modifier = modifier
             .clip(Rincon.shapes.pill)
@@ -236,16 +240,17 @@ fun <T> SegmentedControl(
                         if (isSelected) Modifier.softShadow(3.dp, Rincon.shapes.pill, spotAlpha = 0.18f)
                         else Modifier
                     )
-                    .pressable(hapticOnPress = false) { onSelect(option) }
-                    .defaultMinSize(minHeight = 40.dp)
-                    .padding(vertical = Space.s),
+                    .pressable(hapticOnPress = false) { feedback.click(); onSelect(option) }
+                    .defaultMinSize(minHeight = 42.dp)
+                    .padding(horizontal = 4.dp, vertical = Space.s),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     label(option),
-                    style = Rincon.type.label,
+                    style = Rincon.type.navLabel,
                     color = if (isSelected) colors.textPrimary else colors.textSecondary,
                     maxLines = 1,
+                    softWrap = false,
                 )
             }
         }

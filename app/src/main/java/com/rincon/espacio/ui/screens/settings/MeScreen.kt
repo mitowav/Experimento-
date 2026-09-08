@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,7 +40,9 @@ import com.rincon.espacio.core.feedback.SoundIntensity
 import com.rincon.espacio.data.prefs.UiDensity
 import com.rincon.espacio.ui.components.CozySwitch
 import com.rincon.espacio.ui.components.CozyTextField
+import com.rincon.espacio.ui.components.PalettePicker
 import com.rincon.espacio.ui.components.PaperSurface
+import com.rincon.espacio.ui.components.appear
 import com.rincon.espacio.ui.components.SectionHeader
 import com.rincon.espacio.ui.components.SegmentedControl
 import com.rincon.espacio.ui.components.SettingRow
@@ -81,7 +85,7 @@ fun MeScreen(
         verticalArrangement = Arrangement.spacedBy(Space.m),
     ) {
         item {
-            Column(Modifier.statusBarsPadding().padding(top = Space.l, bottom = Space.s)) {
+            Column(Modifier.statusBarsPadding().padding(top = Space.l, bottom = Space.s).appear(0)) {
                 Text("Tu rincón", style = Rincon.type.display, color = colors.textPrimary)
                 Text("Ajusta cómo se ve y cómo se siente.", style = Rincon.type.body, color = colors.textSecondary)
             }
@@ -103,10 +107,18 @@ fun MeScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.m), modifier = Modifier.fillMaxWidth()) {
-                GhostButton("Objetivos", onOpenGoals, Modifier.weight(1f), icon = RinconIcons.Target)
-                GhostButton("Hábitos", onOpenHabits, Modifier.weight(1f), icon = RinconIcons.Leaf)
-                GhostButton("Estudio", onOpenStudy, Modifier.weight(1f), icon = RinconIcons.Book)
+            // Sin `weight`: cada botón ocupa lo que necesita su texto, y la
+            // fila se desliza. Con la escala de fuente grande del sistema,
+            // repartir el ancho a partes iguales parte las palabras.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                GhostButton("Objetivos", onOpenGoals, icon = RinconIcons.Target)
+                GhostButton("Hábitos", onOpenHabits, icon = RinconIcons.Leaf)
+                GhostButton("Estudio", onOpenStudy, icon = RinconIcons.Book)
             }
         }
 
@@ -127,10 +139,9 @@ fun MeScreen(
                         Spacer(Modifier.height(Space.l))
                         Text("Paleta", style = Rincon.type.label, color = colors.textSecondary)
                         Spacer(Modifier.height(Space.s))
-                        SegmentedControl(
-                            options = ThemePalette.entries.toList(),
+                        PalettePicker(
                             selected = settings.palette,
-                            label = { it.label },
+                            dark = colors.isDark,
                             onSelect = viewModel::setPalette,
                         )
                         Spacer(Modifier.height(Space.l))

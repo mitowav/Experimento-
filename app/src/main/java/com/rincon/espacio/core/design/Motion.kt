@@ -69,8 +69,18 @@ class RinconMotion(val reduced: Boolean) {
         visibilityThreshold = Dp.VisibilityThreshold,
     )
 
+    /** Entrada de un bloque de interfaz: rápida, con salida suave. */
+    fun <T> appear(index: Int = 0): FiniteAnimationSpec<T> = tween(
+        durationMillis = if (reduced) 110 else 300,
+        delayMillis = if (reduced) 0 else (index * 45).coerceAtMost(320),
+        easing = EnterEasing,
+    )
+
     /** Cuánto se permite exagerar un gesto (inclinación, escala al arrastrar). */
     val physicality: Float get() = if (reduced) 0.25f else 1f
+
+    /** Desplazamiento inicial de los bloques al entrar. */
+    val appearOffsetDp: Float get() = if (reduced) 4f else 18f
 
     companion object {
         val StandardEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)

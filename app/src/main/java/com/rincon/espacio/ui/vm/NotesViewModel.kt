@@ -3,6 +3,8 @@ package com.rincon.espacio.ui.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rincon.espacio.core.util.Dates
+import com.rincon.espacio.data.prefs.DeskView
+import com.rincon.espacio.data.prefs.PreferencesRepository
 import com.rincon.espacio.data.repo.GoalRepository
 import com.rincon.espacio.data.repo.NoteRepository
 import com.rincon.espacio.data.repo.ReminderRepository
@@ -56,9 +58,18 @@ data class DeskUiState(
 class NotesViewModel(
     private val notes: NoteRepository,
     private val reminders: ReminderRepository,
+    private val preferences: PreferencesRepository,
     study: StudyRepository,
     goals: GoalRepository,
 ) : ViewModel() {
+
+    /** Vista guardada del tablero, para volver justo donde lo dejaste. */
+    val deskView: StateFlow<DeskView> = preferences.deskView
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DeskView())
+
+    fun rememberDeskView(scale: Float, offsetX: Float, offsetY: Float) {
+        viewModelScope.launch { preferences.saveDeskView(scale, offsetX, offsetY) }
+    }
 
     val state: StateFlow<DeskUiState> = combine(
         notes.observeDesk(),
@@ -71,15 +82,22 @@ class NotesViewModel(
     private val _draft = MutableStateFlow<NoteDraft?>(null)
     val draft: StateFlow<NoteDraft?> = _draft.asStateFlow()
 
-    /** Nota nueva: nace donde se pulsó "+", con una inclinación de reposo leve. */
-    fun startNewNote(xFraction: Float = 0.08f, y: Float = 24f) {
+/**
+     * Nota nueva.
+     *
+     * Nace en el punto del tablero que se está mirando, no en una esquina fija:
+     * si te has ido a una zona del tablero a organizar algo, la nota aparece
+     * ahí, contigo.
+     */
+    fun startNewNote(boardX: Float = 40f, boardY: Float = 40f) {
         val resting = Random.nextDouble(-3.0, 3.0).toFloat()
         _draft.value = NoteDraft(
             note = Note(
-                x = xFraction.coerceIn(0f, 1f),
-                y = y.coerceAtLeast(0f),
+                x = boardX.coerceAtLeast(0f),
+                y = boardY.coerceAtLeast(0f),
                 rotation = resting,
                 colorKey = defaultPalette.random(),
+                styleKey = defaultStyles.random(),
             ),
             isNew = true,
         )
@@ -95,8 +113,8 @@ class NotesViewModel(
                 iconKey = if (subjectId != null) "book" else "check",
                 colorKey = if (subjectId != null) "Sky" else "Sage",
                 rotation = Random.nextDouble(-2.5, 2.5).toFloat(),
-                x = Random.nextDouble(0.05, 0.6).toFloat(),
-                y = Random.nextDouble(20.0, 260.0).toFloat(),
+                x = Random.nextDouble(30.0, 320.0).toFloat(),
+                y = Random.nextDouble(30.0, 420.0).toFloat(),
             ),
             isNew = true,
         )
@@ -244,14 +262,19 @@ class NotesViewModel(
                     colorKey = defaultPalette.random(),
                     priority = Priority.Normal,
                     rotation = Random.nextDouble(-2.5, 2.5).toFloat(),
-                    x = Random.nextDouble(0.05, 0.65).toFloat(),
-                    y = Random.nextDouble(20.0, 320.0).toFloat(),
+                    x = Random.nextDouble(30.0, 340.0).toFloat(),
+                    y = Random.nextDouble(30.0, 500.0).toFloat(),
                 )
             )
         }
     }
 
     private companion object {
-        val defaultPalette = listOf("Butter", "Sky", "Sage", "Rose", "Lavender", "Peach", "Cream")
+        val defaultPalette = listOf(
+            "Butter", "Sky", "Sage", "Rose", "Lavender", "Peach", "Cream", "Mint", "Coral", "Sand",
+        )
+        // Variar el estilo hace que el escritorio parezca un cajón de papeles
+        // de verdad y no un paquete de folios idénticos.
+        val defaultStyles = listOf("Plain", "Plain", "Lined", "Grid", "Sticky", "Recycled")
     }
 }

@@ -11,8 +11,9 @@ import org.junit.Test
  */
 class SnapPhysicsTest {
 
-    private val minX = 20f
-    private val maxX = 220f
+    private val minX = 0f
+    private val maxX = 900f
+    private val maxY = 1400f
     private val grid = 48f
     private val gap = 12f
     private val tolerance = 11f
@@ -24,6 +25,7 @@ class SnapPhysicsTest {
             noteHeight = 120f,
             minX = minX,
             maxX = maxX,
+            maxY = maxY,
             grid = grid,
             gap = gap,
             tolerance = tolerance,
@@ -35,6 +37,7 @@ class SnapPhysicsTest {
         assertEquals(minX, settle(-500f, 100f).x, 0.01f)
         assertEquals(maxX, settle(9000f, 100f).x, 0.01f)
         assertEquals(0f, settle(100f, -400f).y, 0.01f)
+        assertEquals(maxY, settle(100f, 99999f).y, 0.01f)
     }
 
     @Test

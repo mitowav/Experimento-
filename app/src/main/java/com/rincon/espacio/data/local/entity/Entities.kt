@@ -11,6 +11,7 @@ data class NoteEntity(
     val text: String,
     val colorKey: String,
     val iconKey: String,
+    val styleKey: String,
     val x: Float,
     val y: Float,
     val rotation: Float,

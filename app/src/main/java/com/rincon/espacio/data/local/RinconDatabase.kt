@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.rincon.espacio.data.local.dao.EventDao
 import com.rincon.espacio.data.local.dao.GoalDao
 import com.rincon.espacio.data.local.dao.HabitDao
@@ -36,7 +38,7 @@ import com.rincon.espacio.data.local.entity.SubtaskEntity
         EventEntity::class,
         ReminderEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class RinconDatabase : RoomDatabase() {
@@ -48,8 +50,26 @@ abstract class RinconDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
 
     companion object {
+
+        /**
+         * v1 → v2.
+         *
+         * Añade el estilo de papel y, sobre todo, cambia el sistema de
+         * coordenadas del escritorio: antes `x` era una fracción del ancho de
+         * la pantalla (0..1) y ahora es una posición absoluta en dp dentro de
+         * un tablero mucho más grande. Se migra multiplicando, para que quien
+         * ya tenga notas colocadas las siga encontrando donde las dejó.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN styleKey TEXT NOT NULL DEFAULT 'Plain'")
+                db.execSQL("UPDATE notes SET x = x * 320.0 WHERE x <= 1.0")
+            }
+        }
+
         fun build(context: Context): RinconDatabase =
             Room.databaseBuilder(context, RinconDatabase::class.java, "rincon.db")
+                .addMigrations(MIGRATION_1_2)
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
     }

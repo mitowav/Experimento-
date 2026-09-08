@@ -46,6 +46,7 @@ import com.rincon.espacio.ui.components.GhostButton
 import com.rincon.espacio.ui.components.IconPicker
 import com.rincon.espacio.ui.components.NoteCheckbox
 import com.rincon.espacio.ui.components.PaperColorPicker
+import com.rincon.espacio.ui.components.PaperStylePicker
 import com.rincon.espacio.ui.components.PrimaryButton
 import com.rincon.espacio.ui.components.PriorityPicker
 import com.rincon.espacio.ui.components.RinconIcon
@@ -104,6 +105,14 @@ fun NoteEditorSheet(
             PaperColorPicker(
                 selected = draft.note.colorKey,
                 onSelect = { key -> viewModel.editNote { it.copy(colorKey = key) } },
+            )
+
+            Spacer(Modifier.height(Space.l))
+            Column(Modifier.padding(start = Space.xl)) { FieldLabel("Estilo del papel") }
+            PaperStylePicker(
+                selectedStyle = draft.note.styleKey,
+                paperColorKey = draft.note.colorKey,
+                onSelect = { key -> viewModel.editNote { it.copy(styleKey = key) } },
             )
 
             Spacer(Modifier.height(Space.l))

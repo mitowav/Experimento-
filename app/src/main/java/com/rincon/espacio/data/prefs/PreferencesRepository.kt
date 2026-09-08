@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,20 @@ enum class UiDensity(val label: String, val scale: Float) {
         fun fromKey(key: String?): UiDensity = entries.firstOrNull { it.name == key } ?: Comfortable
     }
 }
+
+/**
+ * Dónde estabas mirando el escritorio la última vez.
+ *
+ * No es un ajuste que nadie elija: es memoria. Volver a la app y encontrarla
+ * exactamente como la dejaste (mismo zoom, misma zona del tablero, misma
+ * pestaña) es la diferencia entre "una app" y "tu sitio".
+ */
+data class DeskView(
+    val scale: Float = 1f,
+    val offsetX: Float = 0f,
+    val offsetY: Float = 0f,
+    val lastTab: String = "",
+)
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.System,
@@ -53,7 +68,28 @@ class PreferencesRepository(context: Context) {
         val density = stringPreferencesKey("density")
         val onboarding = booleanPreferencesKey("onboarding_done")
         val displayName = stringPreferencesKey("display_name")
+        val deskScale = floatPreferencesKey("desk_scale")
+        val deskOffsetX = floatPreferencesKey("desk_offset_x")
+        val deskOffsetY = floatPreferencesKey("desk_offset_y")
+        val lastTab = stringPreferencesKey("last_tab")
     }
+
+    val deskView: Flow<DeskView> = store.data.map { p ->
+        DeskView(
+            scale = p[Keys.deskScale] ?: 1f,
+            offsetX = p[Keys.deskOffsetX] ?: 0f,
+            offsetY = p[Keys.deskOffsetY] ?: 0f,
+            lastTab = p[Keys.lastTab].orEmpty(),
+        )
+    }
+
+    suspend fun saveDeskView(scale: Float, offsetX: Float, offsetY: Float) = store.edit {
+        it[Keys.deskScale] = scale
+        it[Keys.deskOffsetX] = offsetX
+        it[Keys.deskOffsetY] = offsetY
+    }
+
+    suspend fun setLastTab(route: String) = store.edit { it[Keys.lastTab] = route }
 
     val settings: Flow<AppSettings> = store.data.map { p ->
         AppSettings(

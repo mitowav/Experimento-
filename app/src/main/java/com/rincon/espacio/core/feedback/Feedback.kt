@@ -42,6 +42,10 @@ interface Feedback {
     fun chime()
     fun toggle()
     fun warn()
+    /** Elegir una opción: un "toc" seco y corto. */
+    fun click()
+    /** Romper algo: papel rasgándose. */
+    fun tear()
 }
 
 /** Implementación inerte: útil en previews y tests. */
@@ -55,6 +59,8 @@ object NoFeedback : Feedback {
     override fun chime() = Unit
     override fun toggle() = Unit
     override fun warn() = Unit
+    override fun click() = Unit
+    override fun tear() = Unit
 }
 
 val LocalFeedback = staticCompositionLocalOf<Feedback> { NoFeedback }
@@ -95,6 +101,7 @@ class FeedbackController(context: Context) : Feedback {
         listOf(
             R.raw.sfx_tap, R.raw.sfx_pop, R.raw.sfx_paper,
             R.raw.sfx_success, R.raw.sfx_reminder, R.raw.sfx_goal,
+            R.raw.sfx_click, R.raw.sfx_tear,
         ).forEach { res -> loaded[res] = soundPool.load(appContext, res, 1) }
     }
 
@@ -168,6 +175,17 @@ class FeedbackController(context: Context) : Feedback {
     override fun warn() {
         play(R.raw.sfx_tap, 0.6f, rate = 0.8f)
         vibrate(HapticStrength.Medium)
+    }
+
+    override fun click() {
+        // Ligera variación de tono para que repetir la acción no suene a bucle.
+        play(R.raw.sfx_click, 0.95f, rate = 0.97f + Math.random().toFloat() * 0.07f)
+        vibrate(HapticStrength.Light)
+    }
+
+    override fun tear() {
+        play(R.raw.sfx_tear, 0.9f, rate = 0.95f + Math.random().toFloat() * 0.1f)
+        vibratePattern(longArrayOf(0, 18, 30, 26), intArrayOf(0, 120, 0, 90))
     }
 
     fun release() {

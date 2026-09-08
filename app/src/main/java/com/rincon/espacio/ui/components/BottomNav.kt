@@ -21,6 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
@@ -41,11 +45,17 @@ fun RinconBottomBar(
     current: String?,
     onSelect: (TabDestination) -> Unit,
     modifier: Modifier = Modifier,
+    onHeightChanged: (Dp) -> Unit = {},
 ) {
     val colors = Rincon.colors
+    val density = LocalDensity.current
     Box(
         modifier = modifier
             .fillMaxWidth()
+            // La altura depende de la barra del sistema y de la escala de texto
+            // del teléfono, así que no se puede suponer: se mide y se comunica
+            // hacia arriba para que nada quede debajo.
+            .onSizeChanged { onHeightChanged(with(density) { it.height.toDp() }) }
             .navigationBarsPadding()
             .padding(horizontal = Space.l, vertical = Space.m),
     ) {
@@ -86,7 +96,7 @@ fun RinconBottomBar(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(24.dp)
                             .graphicsLayer { translationY = -lift * 2.dp.toPx() },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -94,15 +104,17 @@ fun RinconBottomBar(
                             icon = tab.icon,
                             contentDescription = null,
                             tint = if (selected) colors.accent else colors.textMuted,
-                            size = 24.dp,
+                            size = 23.dp,
                         )
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = tab.label,
-                        style = Rincon.type.caption,
+                        style = Rincon.type.navLabel,
                         color = if (selected) colors.accent else colors.textMuted,
                         maxLines = 1,
+                        softWrap = false,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
