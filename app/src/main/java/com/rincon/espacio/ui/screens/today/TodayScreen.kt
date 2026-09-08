@@ -42,6 +42,7 @@ import com.rincon.espacio.ui.components.RoundIconButton
 import com.rincon.espacio.ui.components.SectionHeader
 import com.rincon.espacio.ui.components.SwipeableRow
 import com.rincon.espacio.ui.components.TaskRow
+import com.rincon.espacio.ui.components.UndoBar
 import com.rincon.espacio.ui.components.animatedCount
 import com.rincon.espacio.ui.components.appear
 import com.rincon.espacio.ui.icons.RinconIcons
@@ -67,6 +68,7 @@ fun TodayScreen(
     val plan by viewModel.plan.collectAsStateWithLifecycle()
     val deskState by notesViewModel.state.collectAsStateWithLifecycle()
     val draft by notesViewModel.draft.collectAsStateWithLifecycle()
+    val deleted by notesViewModel.recentlyDeleted.collectAsStateWithLifecycle()
     val colors = Rincon.colors
     val feedback = LocalFeedback.current
     val today = Dates.today()
@@ -250,6 +252,15 @@ fun TodayScreen(
                 }
             }
         }
+
+        UndoBar(
+            visible = deleted != null,
+            label = "Tarea borrada",
+            onUndo = notesViewModel::undoDelete,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = Space.screen, bottom = bottomInset + Space.m),
+        )
 
         FloatingAddButton(
             onClick = { notesViewModel.startNewTask(date) },

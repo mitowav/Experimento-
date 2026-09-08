@@ -26,7 +26,10 @@ class RinconViewModelFactory(private val container: AppContainer) : ViewModelPro
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
         when (modelClass) {
-            SettingsViewModel::class.java -> SettingsViewModel(container.preferences)
+            SettingsViewModel::class.java -> SettingsViewModel(
+                preferences = container.preferences,
+                backup = container.backupRepository,
+            )
             NotesViewModel::class.java -> NotesViewModel(
                 notes = container.noteRepository,
                 reminders = container.reminderRepository,

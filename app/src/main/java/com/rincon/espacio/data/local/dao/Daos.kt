@@ -22,6 +22,15 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
+    @Query("SELECT * FROM notes")
+    suspend fun allNotes(): List<NoteEntity>
+
+    @Query("SELECT * FROM subtasks")
+    suspend fun allSubtasks(): List<SubtaskEntity>
+
+    @Query("DELETE FROM notes")
+    suspend fun clearNotes()
+
     @Query("SELECT * FROM notes WHERE archived = 0 ORDER BY zIndex ASC")
     fun observeAll(): Flow<List<NoteEntity>>
 
@@ -87,6 +96,15 @@ interface NoteDao {
 
 @Dao
 interface GoalDao {
+    @Query("SELECT * FROM goals")
+    suspend fun allGoals(): List<GoalEntity>
+
+    @Query("SELECT * FROM goal_steps")
+    suspend fun allSteps(): List<GoalStepEntity>
+
+    @Query("DELETE FROM goals")
+    suspend fun clearGoals()
+
     @Query("SELECT * FROM goals WHERE archived = 0 ORDER BY position ASC, createdAt ASC")
     fun observeGoals(): Flow<List<GoalEntity>>
 
@@ -120,6 +138,15 @@ interface GoalDao {
 
 @Dao
 interface HabitDao {
+    @Query("SELECT * FROM habits")
+    suspend fun allHabits(): List<HabitEntity>
+
+    @Query("SELECT * FROM habit_checks")
+    suspend fun allChecks(): List<HabitCheckEntity>
+
+    @Query("DELETE FROM habits")
+    suspend fun clearHabits()
+
     @Query("SELECT * FROM habits WHERE archived = 0 ORDER BY position ASC, createdAt ASC")
     fun observeHabits(): Flow<List<HabitEntity>>
 
@@ -147,6 +174,21 @@ interface HabitDao {
 
 @Dao
 interface StudyDao {
+    @Query("SELECT * FROM subjects")
+    suspend fun allSubjects(): List<SubjectEntity>
+
+    @Query("SELECT * FROM exams")
+    suspend fun allExams(): List<ExamEntity>
+
+    @Query("SELECT * FROM study_sessions")
+    suspend fun allSessions(): List<StudySessionEntity>
+
+    @Query("DELETE FROM subjects")
+    suspend fun clearSubjects()
+
+    @Query("DELETE FROM study_sessions")
+    suspend fun clearSessions()
+
     @Query("SELECT * FROM subjects WHERE archived = 0 ORDER BY position ASC, name ASC")
     fun observeSubjects(): Flow<List<SubjectEntity>>
 
@@ -198,6 +240,12 @@ interface StudyDao {
 
 @Dao
 interface EventDao {
+    @Query("SELECT * FROM events")
+    suspend fun allEvents(): List<EventEntity>
+
+    @Query("DELETE FROM events")
+    suspend fun clearEvents()
+
     @Query("SELECT * FROM events WHERE date BETWEEN :from AND :to ORDER BY startTime IS NULL, startTime ASC")
     fun observeBetween(from: Long, to: Long): Flow<List<EventEntity>>
 
@@ -219,6 +267,12 @@ interface EventDao {
 
 @Dao
 interface ReminderDao {
+    @Query("SELECT * FROM reminders")
+    suspend fun allReminders(): List<ReminderEntity>
+
+    @Query("DELETE FROM reminders")
+    suspend fun clearReminders()
+
     @Query("SELECT * FROM reminders WHERE enabled = 1")
     suspend fun allEnabled(): List<ReminderEntity>
 

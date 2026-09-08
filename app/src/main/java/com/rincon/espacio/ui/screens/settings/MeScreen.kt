@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +72,24 @@ fun MeScreen(
     val colors = Rincon.colors
     val context = LocalContext.current
     val feedback = LocalFeedback.current
+
+    val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let { viewModel.exportTo(context.contentResolver, it) } }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { viewModel.importFrom(context.contentResolver, it) } }
+
+    // El aviso se retira solo: es información, no una decisión pendiente.
+    LaunchedEffect(backupMessage) {
+        if (backupMessage != null) {
+            kotlinx.coroutines.delay(4000)
+            viewModel.clearBackupMessage()
+        }
+    }
 
     var notificationsGranted by remember { mutableStateOf(hasNotificationPermission(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -299,16 +318,53 @@ fun MeScreen(
             }
         }
 
+        item { SectionHeader("Tus datos") }
+
         item {
             PaperSurface(Modifier.fillMaxWidth(), elevation = 3.dp) {
                 Column(Modifier.padding(Space.l)) {
-                    Text("Tus datos son tuyos", style = Rincon.type.bodyStrong, color = colors.textPrimary)
-                    Spacer(Modifier.height(Space.xs))
                     Text(
                         "Rincón guarda todo en tu teléfono. No hay cuentas, ni servidores, " +
-                            "ni analítica: la app funciona igual sin conexión.",
+                            "ni analítica: funciona igual sin conexión. Y puedes llevarte " +
+                            "una copia cuando quieras.",
                         style = Rincon.type.body,
                         color = colors.textSecondary,
+                    )
+                    Spacer(Modifier.height(Space.l))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Space.m),
+                    ) {
+                        GhostButton(
+                            label = "Guardar copia",
+                            icon = RinconIcons.Note,
+                            onClick = {
+                                exportLauncher.launch(
+                                    "rincon-" + java.time.LocalDate.now() + ".json"
+                                )
+                            },
+                        )
+                        GhostButton(
+                            label = "Restaurar",
+                            icon = RinconIcons.Undo,
+                            onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                        )
+                    }
+                    if (backupMessage != null) {
+                        Spacer(Modifier.height(Space.m))
+                        Text(
+                            backupMessage.orEmpty(),
+                            style = Rincon.type.label,
+                            color = colors.accent,
+                        )
+                    }
+                    Spacer(Modifier.height(Space.s))
+                    Text(
+                        "Restaurar reemplaza lo que haya ahora.",
+                        style = Rincon.type.caption,
+                        color = colors.textMuted,
                     )
                 }
             }

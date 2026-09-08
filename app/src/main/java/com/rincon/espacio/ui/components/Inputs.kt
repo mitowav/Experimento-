@@ -20,6 +20,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,8 +58,14 @@ fun CozyTextField(
     textStyle: androidx.compose.ui.text.TextStyle = Rincon.type.body,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Default,
+    /** Pide el foco al aparecer: escribir es lo primero que se quiere hacer. */
+    autoFocus: Boolean = false,
 ) {
     val colors = Rincon.colors
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) runCatching { focusRequester.requestFocus() }
+    }
     Box(
         modifier = modifier
             .clip(Rincon.shapes.chip)
@@ -72,7 +81,7 @@ fun CozyTextField(
             singleLine = singleLine,
             minLines = minLines,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             decorationBox = { inner ->
                 if (value.isEmpty()) {
                     Text(

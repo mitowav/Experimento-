@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -81,6 +82,35 @@ class NotesViewModel(
 
     private val _draft = MutableStateFlow<NoteDraft?>(null)
     val draft: StateFlow<NoteDraft?> = _draft.asStateFlow()
+
+    /**
+     * Última nota borrada.
+     *
+     * Romper una nota es un gesto satisfactorio y por eso mismo es fácil
+     * hacerlo sin querer. Se guarda entera —con sus pasos— unos segundos, para
+     * que deshacer sea posible y no haya que arrepentirse de una animación
+     * bonita.
+     */
+    private val _recentlyDeleted = MutableStateFlow<NoteWithSubtasks?>(null)
+    val recentlyDeleted: StateFlow<NoteWithSubtasks?> = _recentlyDeleted.asStateFlow()
+
+    fun dismissUndo() { _recentlyDeleted.value = null }
+
+    fun undoDelete() {
+        val snapshot = _recentlyDeleted.value ?: return
+        _recentlyDeleted.value = null
+        viewModelScope.launch {
+            // Vuelve al mismo sitio del tablero, con su color y su inclinación.
+            val id = notes.create(snapshot.note.copy(id = 0L))
+            if (snapshot.subtasks.isNotEmpty()) {
+                notes.replaceSubtasks(id, snapshot.subtasks)
+            }
+        }
+    }
+
+    private fun rememberForUndo(id: Long) {
+        _recentlyDeleted.value = state.value.notes.firstOrNull { it.note.id == id }
+    }
 
 /**
      * Nota nueva.
@@ -234,11 +264,16 @@ class NotesViewModel(
         val current = _draft.value ?: return
         _draft.value = null
         if (current.isNew) return
-        viewModelScope.launch { notes.delete(current.note.id) }
+        deleteNote(current.note.id)
     }
 
     fun deleteNote(id: Long) {
-        viewModelScope.launch { notes.delete(id) }
+        rememberForUndo(id)
+        viewModelScope.launch {
+            notes.delete(id)
+            delay(UNDO_WINDOW_MS)
+            if (_recentlyDeleted.value?.note?.id == id) _recentlyDeleted.value = null
+        }
     }
 
     fun toggleDone(id: Long, done: Boolean) {
@@ -270,6 +305,7 @@ class NotesViewModel(
     }
 
     private companion object {
+        const val UNDO_WINDOW_MS = 6_000L
         val defaultPalette = listOf(
             "Butter", "Sky", "Sage", "Rose", "Lavender", "Peach", "Cream", "Mint", "Coral", "Sand",
         )

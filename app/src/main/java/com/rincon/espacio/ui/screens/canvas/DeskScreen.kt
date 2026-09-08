@@ -29,6 +29,7 @@ import com.rincon.espacio.ui.components.EmptyState
 import com.rincon.espacio.ui.components.FloatingAddButton
 import com.rincon.espacio.ui.components.NoteCanvas
 import com.rincon.espacio.ui.components.appear
+import com.rincon.espacio.ui.components.UndoBar
 import com.rincon.espacio.ui.components.rememberBoardState
 import com.rincon.espacio.ui.icons.RinconIcons
 import com.rincon.espacio.ui.vm.NotesViewModel
@@ -48,6 +49,7 @@ fun DeskScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val deleted by viewModel.recentlyDeleted.collectAsStateWithLifecycle()
     val colors = Rincon.colors
     val density = LocalDensity.current
     val board = rememberBoardState()
@@ -102,6 +104,15 @@ fun DeskScreen(
                 )
             }
         }
+
+        UndoBar(
+            visible = deleted != null,
+            label = "Nota rota",
+            onUndo = viewModel::undoDelete,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = Space.screen, bottom = bottomInset + Space.m),
+        )
 
         FloatingAddButton(
             onClick = {

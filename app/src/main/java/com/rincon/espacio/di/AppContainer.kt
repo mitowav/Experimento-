@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import com.rincon.espacio.data.local.RinconDatabase
 import com.rincon.espacio.data.prefs.PreferencesRepository
+import com.rincon.espacio.data.repo.BackupRepository
 import com.rincon.espacio.data.repo.EventRepository
 import com.rincon.espacio.data.repo.GoalRepository
 import com.rincon.espacio.data.repo.HabitRepository
@@ -62,6 +63,10 @@ class AppContainer private constructor(context: Context) {
 
     val eventRepository: EventRepository by lazy {
         EventRepository(database.eventDao(), reminderRepository)
+    }
+
+    val backupRepository: BackupRepository by lazy {
+        BackupRepository(database, reminderRepository)
     }
 
     companion object {

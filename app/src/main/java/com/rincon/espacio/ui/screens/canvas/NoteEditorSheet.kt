@@ -120,6 +120,7 @@ fun NoteEditorSheet(
                     placeholder = "¿Qué quieres recordar?",
                     minLines = 3,
                     textStyle = Rincon.type.note,
+                    autoFocus = draft.isNew,
                 )
             }
 
