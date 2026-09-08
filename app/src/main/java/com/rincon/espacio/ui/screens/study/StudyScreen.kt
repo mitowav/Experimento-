@@ -1,6 +1,7 @@
 package com.rincon.espacio.ui.screens.study
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,6 +129,14 @@ fun StudyScreen(
                     onOpenTask = { notesViewModel.openNote(it) },
                     onEditExam = { viewModel.editExam(it) },
                     onReadiness = { exam, value -> viewModel.setReadiness(exam, value) },
+                    onLogSession = { minutes ->
+                        viewModel.addSession(
+                            subjectId = detail.subject.id,
+                            date = Dates.today(),
+                            start = java.time.LocalTime.now(),
+                            minutes = minutes,
+                        )
+                    },
                 )
             }
         }
@@ -318,7 +327,9 @@ private fun SubjectCard(
     onOpenTask: (Long) -> Unit,
     onEditExam: (com.rincon.espacio.domain.model.Exam) -> Unit,
     onReadiness: (com.rincon.espacio.domain.model.Exam, Int) -> Unit,
+    onLogSession: (Int) -> Unit,
 ) {
+    val feedback = com.rincon.espacio.core.feedback.LocalFeedback.current
     val colors = Rincon.colors
     val paper = PaperColor.fromKey(detail.subject.colorKey)
     val accent = paper.edge(colors.isDark)
@@ -451,9 +462,23 @@ private fun SubjectCard(
             }
 
             Spacer(Modifier.height(Space.m))
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                GhostButton("Examen", onNewExam, icon = RinconIcons.Graduation, modifier = Modifier.weight(1f))
-                GhostButton("Tarea", onNewTask, icon = RinconIcons.Plus, modifier = Modifier.weight(1f))
+            // Apuntar lo estudiado tiene que costar un toque, o no se apunta.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Space.s),
+            ) {
+                listOf(15, 25, 50).forEach { minutes ->
+                    com.rincon.espacio.ui.components.CozyChip(
+                        label = "+$minutes min",
+                        selected = false,
+                        icon = RinconIcons.Clock,
+                        onClick = { feedback.complete(); onLogSession(minutes) },
+                    )
+                }
+                GhostButton("Examen", onNewExam, icon = RinconIcons.Graduation)
+                GhostButton("Tarea", onNewTask, icon = RinconIcons.Plus)
             }
         }
     }

@@ -1,5 +1,10 @@
 package com.rincon.espacio.ui.screens.canvas
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -27,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -79,6 +85,20 @@ fun NoteEditorSheet(
     var showTimePicker by remember { mutableStateOf(false) }
     var newSubtask by remember { mutableStateOf("") }
     var expanded by remember(draft.isNew) { mutableStateOf(!draft.isNew) }
+
+    // El permiso se pide justo cuando se activa un aviso, no al abrir la app:
+    // así se entiende para qué sirve y se puede decir que sí con criterio.
+    val context = LocalContext.current
+    val notificationPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { }
+
+    fun askForNotificationsIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     val chevronTurn by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -274,6 +294,7 @@ fun NoteEditorSheet(
                                         checked = draft.reminderEnabled,
                                         onCheckedChange = { value ->
                                             viewModel.editDraft { it.copy(reminderEnabled = value) }
+                                            if (value) askForNotificationsIfNeeded()
                                         },
                                     )
                                 }
