@@ -401,10 +401,12 @@ fun NoteCheckbox(
         label = "check",
     )
     val pulse = remember { Animatable(1f) }
+    // El muelle se lee aquí: dentro de LaunchedEffect ya no hay composición.
+    val pulseSpec = Rincon.motion.settle<Float>()
     LaunchedEffect(checked) {
         if (checked) {
             pulse.snapTo(0f)
-            pulse.animateTo(1f, Rincon.motion.settle())
+            pulse.animateTo(1f, pulseSpec)
         }
     }
 
