@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rincón</string>
+    <string name="channel_reminders_name">Recordatorios</string>
+    <string name="channel_reminders_desc">Avisos de tus notas, tareas, estudio y hábitos.</string>
+</resources>
