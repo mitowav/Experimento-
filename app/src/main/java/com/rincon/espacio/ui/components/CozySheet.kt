@@ -52,6 +52,11 @@ fun CozySheet(
     visible: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Acciones fijas al pie. No entran en el área que se desplaza, así que
+     * "Guardar" está siempre a la vista por largo que sea el formulario.
+     */
+    footer: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     if (!visible) return
@@ -109,7 +114,6 @@ fun CozySheet(
                             .fillMaxWidth()
                             .imePadding()
                             .navigationBarsPadding()
-                            .padding(bottom = Space.m)
                     ) {
                         Box(
                             Modifier.fillMaxWidth().padding(vertical = Space.m),
@@ -123,7 +127,30 @@ fun CozySheet(
                                     .background(colors.outline)
                             )
                         }
-                        content()
+
+                        // `weight(fill = false)` no es un detalle: una Column
+                        // mide a sus hijos sin límite de alto, así que un
+                        // contenido con scroll dentro de ella crece hasta donde
+                        // quiera y empuja lo que venga después fuera de la
+                        // pantalla. Esto lo obliga a caber y, por tanto, a
+                        // desplazarse de verdad.
+                        Box(Modifier.weight(1f, fill = false)) {
+                            content()
+                        }
+
+                        if (footer != null) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(colors.outlineSoft)
+                            )
+                            Box(Modifier.padding(top = Space.m, bottom = Space.m)) {
+                                footer()
+                            }
+                        } else {
+                            Spacer(Modifier.height(Space.m))
+                        }
                     }
                 }
             }

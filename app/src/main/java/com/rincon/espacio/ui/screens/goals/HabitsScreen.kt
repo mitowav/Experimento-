@@ -130,7 +130,32 @@ fun HabitsScreen(
     val habit = editing
     if (habit != null) {
         var showTime by remember(habit.id) { mutableStateOf(false) }
-        CozySheet(visible = true, onDismiss = viewModel::dismiss) {
+        CozySheet(
+            visible = true,
+            onDismiss = viewModel::dismiss,
+            footer = {
+                Row(
+                    modifier = Modifier.padding(horizontal = Space.xl),
+                    horizontalArrangement = Arrangement.spacedBy(Space.m),
+                ) {
+                    if (habit.id != 0L) {
+                        GhostButton(
+                            "Borrar",
+                            { viewModel.delete(habit.id) },
+                            icon = RinconIcons.Trash,
+                            tint = colors.danger,
+                        )
+                    }
+                    PrimaryButton(
+                        label = "Guardar",
+                        icon = RinconIcons.Check,
+                        onClick = viewModel::save,
+                        modifier = Modifier.weight(1f),
+                        enabled = habit.title.isNotBlank(),
+                    )
+                }
+            },
+        ) {
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
@@ -174,27 +199,7 @@ fun HabitsScreen(
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
                 IconPicker(habit.iconKey, onSelect = { key -> viewModel.update { it.copy(iconKey = key) } })
-                Spacer(Modifier.height(Space.xl))
-                Row(
-                    Modifier.padding(horizontal = Space.xl),
-                    horizontalArrangement = Arrangement.spacedBy(Space.m),
-                ) {
-                    if (habit.id != 0L) {
-                        GhostButton(
-                            "Borrar",
-                            { viewModel.delete(habit.id) },
-                            icon = RinconIcons.Trash,
-                            tint = colors.danger,
-                        )
-                    }
-                    PrimaryButton(
-                        label = "Guardar",
-                        icon = RinconIcons.Check,
-                        onClick = viewModel::save,
-                        modifier = Modifier.weight(1f),
-                        enabled = habit.title.isNotBlank(),
-                    )
-                }
+                Spacer(Modifier.height(Space.s))
             }
         }
         TimePickerSheet(

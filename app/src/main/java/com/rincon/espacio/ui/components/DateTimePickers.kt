@@ -216,7 +216,19 @@ fun DatePickerSheet(
     var month by remember(visible) { mutableStateOf(YearMonth.from(start)) }
     var chosen by remember(visible) { mutableStateOf(initial) }
 
-    CozySheet(visible = visible, onDismiss = onDismiss) {
+    CozySheet(
+        visible = visible,
+        onDismiss = onDismiss,
+        footer = {
+            Row(
+                modifier = Modifier.padding(horizontal = Space.xl),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                GhostButton("Cancelar", onDismiss, Modifier.weight(1f))
+                PrimaryButton("Guardar", { onPick(chosen) }, Modifier.weight(1f))
+            }
+        },
+    ) {
         Column(Modifier.padding(horizontal = Space.xl)) {
             SheetTitle("¿Qué día?", modifier = Modifier.padding(horizontal = 0.dp))
             Spacer(Modifier.height(Space.l))
@@ -237,11 +249,6 @@ fun DatePickerSheet(
                 selected = chosen,
                 onSelect = { chosen = it },
             )
-            Spacer(Modifier.height(Space.l))
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                GhostButton("Cancelar", onDismiss, Modifier.weight(1f))
-                PrimaryButton("Guardar", { onPick(chosen) }, Modifier.weight(1f))
-            }
         }
     }
 }
@@ -257,7 +264,19 @@ fun TimePickerSheet(
     var hour by remember(visible) { mutableStateOf(initial?.hour ?: 9) }
     var minute by remember(visible) { mutableStateOf(initial?.minute ?: 0) }
 
-    CozySheet(visible = visible, onDismiss = onDismiss) {
+    CozySheet(
+        visible = visible,
+        onDismiss = onDismiss,
+        footer = {
+            Row(
+                modifier = Modifier.padding(horizontal = Space.xl),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                GhostButton("Quitar hora", { onPick(null) }, Modifier.weight(1f))
+                PrimaryButton("Guardar", { onPick(LocalTime.of(hour, minute)) }, Modifier.weight(1f))
+            }
+        },
+    ) {
         Column(Modifier.padding(horizontal = Space.xl)) {
             SheetTitle("¿A qué hora?", modifier = Modifier.padding(horizontal = 0.dp))
             Spacer(Modifier.height(Space.l))
@@ -289,11 +308,6 @@ fun TimePickerSheet(
                         modifier = Modifier.weight(1f),
                     )
                 }
-            }
-            Spacer(Modifier.height(Space.l))
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                GhostButton("Quitar hora", { onPick(null) }, Modifier.weight(1f))
-                PrimaryButton("Guardar", { onPick(LocalTime.of(hour, minute)) }, Modifier.weight(1f))
             }
         }
     }

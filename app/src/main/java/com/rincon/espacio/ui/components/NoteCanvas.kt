@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -168,6 +170,7 @@ fun NoteCanvas(
     val feedback = LocalFeedback.current
     val colors = Rincon.colors
     val scope = rememberCoroutineScope()
+    val appearSpec = motion.playful<Float>()
 
     val states = remember { mutableStateMapOf<Long, NoteMotion>() }
     val shatters = remember { mutableStateListOf<Shatter>() }
@@ -195,31 +198,23 @@ fun NoteCanvas(
         boardState.offset = boardState.clamp()
     }
 
-    // Sincroniza el estado físico con los datos, sin tocar la nota que se está
-    // arrastrando en este momento.
+    // Sincroniza la posición guardada con la posición dibujada, sin tocar la
+    // nota que se está arrastrando en este momento. El estado físico de cada
+    // nota NO se crea aquí a propósito: este efecto se reinicia cada vez que
+    // cambia la lista, y crear aquí las animaciones de entrada hacía que se
+    // cancelaran a medio camino y las notas se quedaran invisibles.
     LaunchedEffect(items) {
-        val firstLoad = !initialized
-        items.forEachIndexed { index, item ->
+        items.forEach { item ->
             val note = item.note
-            val target = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) }
-            val existing = states[note.id]
-            if (existing == null) {
-                val fresh = NoteMotion(target, note.rotation)
-                states[note.id] = fresh
-                launch {
-                    // En la primera carga entran en cascada; después, al vuelo.
-                    if (firstLoad) delay(index * 28L)
-                    fresh.appear.animateTo(1f, motion.playful())
-                }
-            } else if (!existing.dragging) {
+            val existing = states[note.id] ?: return@forEach
+            if (!existing.dragging) {
                 existing.resting = note.rotation
+                val target = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) }
                 if ((existing.value - target).getDistance() > 1.5f) {
                     existing.value = target
                 }
             }
         }
-        val ids = items.map { it.note.id }.toSet()
-        states.keys.filter { it !in ids }.forEach { states.remove(it) }
         topZ = items.maxOfOrNull { it.note.zIndex } ?: 0
         initialized = true
     }
@@ -378,11 +373,31 @@ fun NoteCanvas(
                 // pequeño anclado arriba a la izquierda. `requiredSize` impone
                 // el tamaño real del tablero e ignora esas restricciones.
                 .requiredSize(Board.Width, Board.Height)
-                .boardSurface(colors.outlineSoft, colors.surfaceSunken)
+                .boardSurface(colors.outline, colors.surface)
         ) {
-            items.sortedBy { it.note.zIndex }.forEach { item ->
+            items.sortedBy { it.note.zIndex }.forEachIndexed { index, item ->
                 val note = item.note
-                val state = states[note.id] ?: return@forEach
+                key(note.id) {
+
+                // El estado físico vive con la nota, no con la lista: así una
+                // recomposición de la lista no puede cancelar su entrada.
+                val state = remember(note.id) {
+                    NoteMotion(
+                        start = with(density) { Offset(note.x.dp.toPx(), note.y.dp.toPx()) },
+                        restingRotation = note.rotation,
+                    ).also { states[note.id] = it }
+                }
+                DisposableEffect(note.id) {
+                    onDispose { states.remove(note.id) }
+                }
+                LaunchedEffect(note.id) {
+                    if (state.appear.value < 1f) {
+                        // En la primera carga entran en cascada; después, al vuelo.
+                        if (!initialized) delay(index * 28L)
+                        state.appear.animateTo(1f, appearSpec)
+                    }
+                }
+
                 val liftValue = state.lift.value
                 val appearValue = state.appear.value
 
@@ -536,6 +551,7 @@ fun NoteCanvas(
                         } else null,
                     )
                 }
+                }
             }
         }
 
@@ -663,9 +679,15 @@ private fun ZoomButton(
  * no hay nada que se haga pequeño. Estas líneas dan esa referencia espacial, y
  * el marco recuerda dónde termina el tablero.
  */
-private fun Modifier.boardSurface(line: Color, edge: Color): Modifier = this.drawBehind {
+private fun Modifier.boardSurface(line: Color, surface: Color): Modifier = this.drawBehind {
+    // El tablero es una superficie, no un vacío: se pinta como una mesa un
+    // punto distinta del fondo de la app, para que se vea dónde empieza y
+    // dónde acaba tu escritorio.
+    val corner = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx())
+    drawRoundRect(color = surface.copy(alpha = 0.45f), cornerRadius = corner)
+
     val step = 96.dp.toPx()
-    val faint = line.copy(alpha = 0.35f)
+    val faint = line.copy(alpha = 0.30f)
     var x = step
     while (x < size.width) {
         drawLine(faint, Offset(x, 0f), Offset(x, size.height), 1f)
@@ -676,8 +698,10 @@ private fun Modifier.boardSurface(line: Color, edge: Color): Modifier = this.dra
         drawLine(faint, Offset(0f, y), Offset(size.width, y), 1f)
         y += step
     }
-    drawRect(
-        color = edge.copy(alpha = 0.6f),
+
+    drawRoundRect(
+        color = line.copy(alpha = 0.9f),
+        cornerRadius = corner,
         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
     )
 }

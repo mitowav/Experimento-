@@ -77,7 +77,31 @@ fun NoteEditorSheet(
     var showTimePicker by remember { mutableStateOf(false) }
     var newSubtask by remember { mutableStateOf("") }
 
-    CozySheet(visible = true, onDismiss = viewModel::dismissEditor) {
+    CozySheet(
+        visible = true,
+        onDismiss = viewModel::dismissEditor,
+        footer = {
+            Row(
+                modifier = Modifier.padding(horizontal = Space.xl),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                if (!draft.isNew) {
+                    GhostButton(
+                        label = "Borrar",
+                        icon = RinconIcons.Trash,
+                        tint = colors.danger,
+                        onClick = viewModel::deleteDraft,
+                    )
+                }
+                PrimaryButton(
+                    label = "Guardar",
+                    icon = RinconIcons.Check,
+                    onClick = viewModel::saveDraft,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        },
+    ) {
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState()),
@@ -343,23 +367,7 @@ fun NoteEditorSheet(
                     }
                 }
 
-                Spacer(Modifier.height(Space.xl))
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                    if (!draft.isNew) {
-                        GhostButton(
-                            label = "Borrar",
-                            icon = RinconIcons.Trash,
-                            tint = colors.danger,
-                            onClick = viewModel::deleteDraft,
-                        )
-                    }
-                    PrimaryButton(
-                        label = "Guardar",
-                        icon = RinconIcons.Check,
-                        onClick = viewModel::saveDraft,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                Spacer(Modifier.height(Space.s))
             }
         }
     }

@@ -143,7 +143,32 @@ fun StudyScreen(
 
     val subject = editingSubject
     if (subject != null) {
-        CozySheet(visible = true, onDismiss = viewModel::dismissSubject) {
+        CozySheet(
+            visible = true,
+            onDismiss = viewModel::dismissSubject,
+            footer = {
+                Row(
+                    modifier = Modifier.padding(horizontal = Space.xl),
+                    horizontalArrangement = Arrangement.spacedBy(Space.m),
+                ) {
+                    if (subject.id != 0L) {
+                        GhostButton(
+                            "Borrar",
+                            { viewModel.deleteSubject(subject.id) },
+                            icon = RinconIcons.Trash,
+                            tint = colors.danger,
+                        )
+                    }
+                    PrimaryButton(
+                        "Guardar",
+                        viewModel::saveSubject,
+                        Modifier.weight(1f),
+                        icon = RinconIcons.Check,
+                        enabled = subject.name.isNotBlank(),
+                    )
+                }
+            },
+        ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 SheetTitle(if (subject.id == 0L) "Nueva asignatura" else "Editar asignatura")
                 Spacer(Modifier.height(Space.l))
@@ -168,27 +193,7 @@ fun StudyScreen(
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
                 IconPicker(subject.iconKey, onSelect = { key -> viewModel.updateSubject { it.copy(iconKey = key) } })
-                Spacer(Modifier.height(Space.xl))
-                Row(
-                    Modifier.padding(horizontal = Space.xl),
-                    horizontalArrangement = Arrangement.spacedBy(Space.m),
-                ) {
-                    if (subject.id != 0L) {
-                        GhostButton(
-                            "Borrar",
-                            { viewModel.deleteSubject(subject.id) },
-                            icon = RinconIcons.Trash,
-                            tint = colors.danger,
-                        )
-                    }
-                    PrimaryButton(
-                        "Guardar",
-                        viewModel::saveSubject,
-                        Modifier.weight(1f),
-                        icon = RinconIcons.Check,
-                        enabled = subject.name.isNotBlank(),
-                    )
-                }
+                Spacer(Modifier.height(Space.s))
             }
         }
     }
@@ -198,7 +203,31 @@ fun StudyScreen(
         var showDate by remember(exam.id) { mutableStateOf(false) }
         var showTime by remember(exam.id) { mutableStateOf(false) }
         var remind by remember(exam.id) { mutableStateOf(exam.reminderId != null) }
-        CozySheet(visible = true, onDismiss = viewModel::dismissExam) {
+        CozySheet(
+            visible = true,
+            onDismiss = viewModel::dismissExam,
+            footer = {
+                Row(
+                    modifier = Modifier.padding(horizontal = Space.xl),
+                    horizontalArrangement = Arrangement.spacedBy(Space.m),
+                ) {
+                    if (exam.id != 0L) {
+                        GhostButton(
+                            "Borrar",
+                            { viewModel.deleteExam(exam.id) },
+                            icon = RinconIcons.Trash,
+                            tint = colors.danger,
+                        )
+                    }
+                    PrimaryButton(
+                        "Guardar",
+                        { viewModel.saveExam(remind) },
+                        Modifier.weight(1f),
+                        icon = RinconIcons.Check,
+                    )
+                }
+            },
+        ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 SheetTitle(if (exam.id == 0L) "Nuevo examen" else "Editar examen")
                 Spacer(Modifier.height(Space.l))
@@ -247,23 +276,7 @@ fun StudyScreen(
                         }
                         CozySwitch(checked = remind && exam.time != null, onCheckedChange = { remind = it })
                     }
-                    Spacer(Modifier.height(Space.xl))
-                    Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                        if (exam.id != 0L) {
-                            GhostButton(
-                                "Borrar",
-                                { viewModel.deleteExam(exam.id) },
-                                icon = RinconIcons.Trash,
-                                tint = colors.danger,
-                            )
-                        }
-                        PrimaryButton(
-                            "Guardar",
-                            { viewModel.saveExam(remind) },
-                            Modifier.weight(1f),
-                            icon = RinconIcons.Check,
-                        )
-                    }
+                    Spacer(Modifier.height(Space.s))
                 }
             }
         }

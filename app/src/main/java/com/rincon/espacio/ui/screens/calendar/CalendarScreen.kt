@@ -429,7 +429,31 @@ private fun EventEditorSheet(
     var showTime by remember { mutableStateOf(false) }
     val colors = Rincon.colors
 
-    CozySheet(visible = true, onDismiss = onDismiss) {
+    CozySheet(
+        visible = true,
+        onDismiss = onDismiss,
+        footer = {
+            Row(
+                modifier = Modifier.padding(horizontal = Space.xl),
+                horizontalArrangement = Arrangement.spacedBy(Space.m),
+            ) {
+                if (event.id != 0L) {
+                    GhostButton(
+                        label = "Borrar",
+                        icon = RinconIcons.Trash,
+                        tint = colors.danger,
+                        onClick = { onDelete(event.id) },
+                    )
+                }
+                PrimaryButton(
+                    label = "Guardar",
+                    icon = RinconIcons.Check,
+                    onClick = { if (draft.title.isNotBlank()) onSave(draft, remind, lead) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        },
+    ) {
         Column(
             Modifier
                 .verticalScroll(rememberScrollState())
@@ -496,23 +520,7 @@ private fun EventEditorSheet(
                         }
                     }
                 }
-                Spacer(Modifier.height(Space.xl))
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.m)) {
-                    if (event.id != 0L) {
-                        GhostButton(
-                            label = "Borrar",
-                            icon = RinconIcons.Trash,
-                            tint = colors.danger,
-                            onClick = { onDelete(event.id) },
-                        )
-                    }
-                    PrimaryButton(
-                        label = "Guardar",
-                        icon = RinconIcons.Check,
-                        onClick = { if (draft.title.isNotBlank()) onSave(draft, remind, lead) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                Spacer(Modifier.height(Space.s))
             }
         }
     }

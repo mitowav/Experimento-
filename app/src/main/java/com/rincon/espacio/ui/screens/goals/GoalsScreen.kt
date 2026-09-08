@@ -192,7 +192,32 @@ fun GoalsScreen(
     val goal = editing
     if (goal != null) {
         var showDate by remember(goal.id) { mutableStateOf(false) }
-        CozySheet(visible = true, onDismiss = viewModel::dismiss) {
+        CozySheet(
+            visible = true,
+            onDismiss = viewModel::dismiss,
+            footer = {
+                Row(
+                    modifier = Modifier.padding(horizontal = Space.xl),
+                    horizontalArrangement = Arrangement.spacedBy(Space.m),
+                ) {
+                    if (goal.id != 0L) {
+                        GhostButton(
+                            "Borrar",
+                            { viewModel.delete(goal.id) },
+                            icon = RinconIcons.Trash,
+                            tint = colors.danger,
+                        )
+                    }
+                    PrimaryButton(
+                        label = "Guardar",
+                        icon = RinconIcons.Check,
+                        onClick = viewModel::save,
+                        modifier = Modifier.weight(1f),
+                        enabled = goal.title.isNotBlank(),
+                    )
+                }
+            },
+        ) {
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
@@ -226,16 +251,7 @@ fun GoalsScreen(
                 Spacer(Modifier.height(Space.l))
                 Column(Modifier.padding(start = Space.xl)) { FieldLabel("Icono") }
                 IconPicker(goal.iconKey, onSelect = { key -> viewModel.update { it.copy(iconKey = key) } })
-                Spacer(Modifier.height(Space.xl))
-                Column(Modifier.padding(horizontal = Space.xl)) {
-                    PrimaryButton(
-                        label = "Guardar",
-                        icon = RinconIcons.Check,
-                        onClick = viewModel::save,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = goal.title.isNotBlank(),
-                    )
-                }
+                Spacer(Modifier.height(Space.s))
             }
         }
         DatePickerSheet(
