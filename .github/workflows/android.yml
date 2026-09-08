@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -51,6 +54,28 @@ jobs:
           name: rincon-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      # Los artefactos de Actions se descargan en .zip, que un movil no puede
+      # instalar. Publicar el APK como asset de una release da un enlace
+      # directo al fichero, que si se instala desde el telefono.
+      - name: Publicar APK como release descargable
+        if: github.ref_name == 'claude/productivity-app-android-i8wbt6'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk rincon.apk
+          cp app/build/outputs/apk/debug/app-debug.apk rincon-debug.apk
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest rincon.apk rincon-debug.apk \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Rincón — APK más reciente" \
+            --notes "APK instalable generado automáticamente desde el commit $GITHUB_SHA.
+
+          - **rincon.apk** — versión optimizada (recomendada).
+          - **rincon-debug.apk** — versión de depuración; se instala en paralelo, sin sustituir a la otra.
+
+          Ambos van firmados con la clave de depuración: son instalables, pero no aptos para Google Play."
 
       - name: Upload test/lint reports
         if: always()
